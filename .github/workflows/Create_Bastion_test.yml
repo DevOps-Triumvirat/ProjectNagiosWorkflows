@@ -1,4 +1,4 @@
-name: Create Bastion
+name: Create Bastion TEST
 
 on:
   workflow_dispatch:
@@ -98,10 +98,6 @@ jobs:
         run: |
           cd ProjectNagiosWorkflows/terraform/bastion
           aws s3 cp s3://${{ inputs.bucket_name }}/nagios/terraform.tfvars terraform.tfvars
-          echo "" >> terraform.tfvars
-          echo "# Bastion specific configuration from workflow inputs" >> terraform.tfvars
-          echo "region = \"${{ inputs.bastion_instance_region }}\"" >> terraform.tfvars
-          echo "key_name = \"generated-bastion-key\"" >> terraform.tfvars
 
       - name: Terraform Init
         run: |
