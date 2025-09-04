@@ -48,12 +48,17 @@ jobs:
     environment: ${{ inputs.region }}
     
     steps:
-      - name: Checkout Private Repository
+      - name: Checkout Current Repository (ProjectNagiosWorkflows)
         uses: actions/checkout@v4
         with:
-          repository: "LikeNo1Else/ProjectNagios"
+          path: ProjectNagiosWorkflows
+
+      - name: Checkout Private Repository (ProjectNagios)
+        uses: actions/checkout@v4
+        with:
+          repository: "DevOps-Triumvirat/ProjectNagios"
           token: ${{ secrets.PRIVATE_REPO_TOKEN }}
-          path: nagios-project
+          path: ProjectNagios
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -85,12 +90,12 @@ jobs:
           aws-region: ${{ inputs.region }}
 
       - name: Create terraform.tfvars from environment secret
-        working-directory: nagios-project/Terraform/Alexander/Nagios
+        working-directory: ProjectNagios/Terraform/Alexander/Nagios
         run: |
           echo "${{ secrets.TERRAFORM_TFVARS }}" > terraform.tfvars
 
       - name: Terraform Init
-        working-directory: nagios-project/Terraform/Alexander/Nagios
+        working-directory: ProjectNagios/Terraform/Alexander/Nagios
         run: |
           terraform init \
             -backend-config="bucket=${{ inputs.bucket_name }}" \
@@ -98,15 +103,15 @@ jobs:
             -backend-config="region=${{ inputs.bucket_region }}"
 
       - name: Terraform Plan
-        working-directory: nagios-project/Terraform/Alexander/Nagios
+        working-directory: ProjectNagios/Terraform/Alexander/Nagios
         run: terraform plan -var-file="terraform.tfvars"
 
       - name: Terraform Apply
         if: inputs.action == 'apply'
-        working-directory: nagios-project/Terraform/Alexander/Nagios
+        working-directory: ProjectNagios/Terraform/Alexander/Nagios
         run: terraform apply -auto-approve -var-file="terraform.tfvars"
 
       - name: Terraform Destroy
         if: inputs.action == 'destroy'
-        working-directory: nagios-project/Terraform/Alexander/Nagios
+        working-directory: ProjectNagios/Terraform/Alexander/Nagios
         run: terraform destroy -auto-approve -var-file="terraform.tfvars"
