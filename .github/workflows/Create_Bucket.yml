@@ -125,6 +125,16 @@ jobs:
         if: inputs.action == 'create_bucket'
         run: terraform apply -auto-approve
 
+      - name: Create empty nagios/terraform.tfstate file
+        if: inputs.action == 'create_bucket'
+        run: |
+          # Create an empty terraform state file for nagios (not the bucket creation state)
+          echo '{}' > empty_nagios_state.json
+          
+          # Upload the empty state file to the nagios folder
+          aws s3 cp empty_nagios_state.json s3://${{ inputs.bucket }}/nagios/terraform.tfstate
+          echo "Created empty nagios/terraform.tfstate file in bucket ${{ inputs.bucket }}"
+
       - name: Terraform Destroy
         if: inputs.action == 'destroy_bucket'
         run: terraform destroy -auto-approve 
