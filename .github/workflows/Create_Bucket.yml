@@ -1,4 +1,4 @@
-name: ProjectCreateBucket
+name: Create_Bucket
 
 on:
   workflow_dispatch:
