@@ -19,8 +19,8 @@ on:
         required: true
         type: choice
         options:
-          - eliza-dev
           - alexander-test
+          - eliza-dev
           - emir-production
       region:
         description: "Choose AWS region"
