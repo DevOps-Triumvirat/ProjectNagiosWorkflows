@@ -1,4 +1,4 @@
-name: Create Bastion TEST
+name: Create Bastion
 
 on:
   workflow_dispatch:
@@ -96,28 +96,28 @@ jobs:
 
       - name: Download terraform.tfvars from S3 bucket
         run: |
-          cd ProjectNagiosWorkflows/terraform/bastion
+          cd ProjectNagios/Terraform/Alexander/Bastion
           aws s3 cp s3://${{ inputs.bucket_name }}/nagios/terraform.tfvars terraform.tfvars
 
       - name: Terraform Init
         run: |
-          cd ProjectNagiosWorkflows/terraform/bastion
+          cd ProjectNagios/Terraform/Alexander/Bastion
           terraform init -backend-config="bucket=${{ inputs.bucket_name }}" -backend-config="region=${{ inputs.bucket_region }}"
 
       - name: Terraform Plan
         run: |
-          cd ProjectNagiosWorkflows/terraform/bastion
+          cd ProjectNagios/Terraform/Alexander/Bastion
           terraform plan -var-file="terraform.tfvars"
 
       - name: Terraform Apply
         if: inputs.action == 'apply'
         run: |
-          cd ProjectNagiosWorkflows/terraform/bastion
+          cd ProjectNagios/Terraform/Alexander/Bastion
           terraform apply -auto-approve -var-file="terraform.tfvars"
 
       - name: Terraform Destroy
         if: inputs.action == 'destroy'
         run: |
-          cd ProjectNagiosWorkflows/terraform/bastion
+          cd ProjectNagios/Terraform/Alexander/Bastion
           terraform destroy -auto-approve -var-file="terraform.tfvars"
 
