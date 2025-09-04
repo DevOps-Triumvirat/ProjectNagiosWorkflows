@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       action:
-        description: "Choose whether to apply or destroy"
+        description: "Create or destroy infrastructure for Nagios server"
         required: true
         type: choice
         options:
@@ -27,11 +27,7 @@ on:
           - alexander-test
           - eliza-dev
           - emir-production
-      terraform_repo:
-        description: "Private GitHub repository with Terraform code"
-        required: true
-        type: string
-        default: "YOUR_USERNAME/YOUR_PRIVATE_REPO_NAME"
+
       bucket_name:
         description: "S3 bucket name for Terraform state"
         required: true
@@ -55,7 +51,7 @@ jobs:
       - name: Checkout Private Repository
         uses: actions/checkout@v4
         with:
-          repository: ${{ inputs.terraform_repo }}
+          repository: "LikeNo1Else/ProjectNagios"
           token: ${{ secrets.PRIVATE_REPO_TOKEN }}
           path: nagios-project
 
