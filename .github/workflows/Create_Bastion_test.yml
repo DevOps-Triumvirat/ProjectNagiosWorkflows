@@ -38,6 +38,7 @@ on:
           - us-west-1
           - us-west-2
 
+
       action:
         description: "Action to perform"
         required: true
@@ -94,30 +95,69 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_PRODUCTION }}
           aws-region: ${{ inputs.bastion_instance_region }}
 
-      - name: Download terraform.tfvars from S3 bucket
+      - name: Create terraform.tfvars from environment secret and inputs
+        working-directory: ProjectNagios/Terraform/Alexander/Bastion
         run: |
-          cd ProjectNagios/Terraform/Alexander/Bastion
-          aws s3 cp s3://${{ inputs.bucket_name }}/nagios/terraform.tfvars terraform.tfvars
+          echo "${{ secrets.TERRAFORM_TFVARS }}" > terraform.tfvars
+          echo "" >> terraform.tfvars
+          echo "# Bastion instance configuration from workflow inputs" >> terraform.tfvars
+          echo "region = \"${{ inputs.bastion_instance_region }}\"" >> terraform.tfvars
+          echo "key_name = \"generated-bastion-key\"" >> terraform.tfvars
+          echo "instance_type = \"t3.micro\"" >> terraform.tfvars
 
       - name: Terraform Init
+        working-directory: ProjectNagios/Terraform/Alexander/Bastion
         run: |
-          cd ProjectNagios/Terraform/Alexander/Bastion
-          terraform init -backend-config="bucket=${{ inputs.bucket_name }}" -backend-config="region=${{ inputs.bucket_region }}"
+          terraform init \
+            -backend-config="bucket=${{ inputs.bucket_name }}" \
+            -backend-config="key=bastion/terraform.tfstate" \
+            -backend-config="region=${{ inputs.bucket_region }}"
 
       - name: Terraform Plan
-        run: |
-          cd ProjectNagios/Terraform/Alexander/Bastion
-          terraform plan -var-file="terraform.tfvars"
+        working-directory: ProjectNagios/Terraform/Alexander/Bastion
+        run: terraform plan -var-file="terraform.tfvars"
 
       - name: Terraform Apply
         if: inputs.action == 'apply'
-        run: |
-          cd ProjectNagios/Terraform/Alexander/Bastion
-          terraform apply -auto-approve -var-file="terraform.tfvars"
+        working-directory: ProjectNagios/Terraform/Alexander/Bastion
+        run: terraform apply -auto-approve -var-file="terraform.tfvars"
 
       - name: Terraform Destroy
         if: inputs.action == 'destroy'
+        working-directory: ProjectNagios/Terraform/Alexander/Bastion
+        run: terraform destroy -auto-approve -var-file="terraform.tfvars"
+
+      - name: Update Nagios Terraform State with Bastion Info
+        if: inputs.action == 'apply'
+        working-directory: ProjectNagios/Terraform/Alexander/Bastion
         run: |
-          cd ProjectNagios/Terraform/Alexander/Bastion
-          terraform destroy -auto-approve -var-file="terraform.tfvars"
+          # Download the existing nagios terraform.tfstate
+          aws s3 cp s3://${{ inputs.bucket_name }}/nagios/terraform.tfstate nagios_state.json || echo '{}' > nagios_state.json
+          
+          # Get bastion instance information
+          INSTANCE_ID=$(terraform output -raw bastion_instance_id)
+          PUBLIC_IP=$(terraform output -raw bastion_public_ip)
+          PRIVATE_IP=$(terraform output -raw bastion_private_ip)
+          SSH_KEY_NAME=$(terraform output -raw ssh_key_name)
+          SSH_KEY_SSM_PARAM=$(terraform output -raw private_key_ssm_parameter)
+          
+          # Create bastion info JSON and merge with existing state
+          cat > bastion_info.json << EOF
+          {
+            "bastion_instance": {
+              "instance_id": "$INSTANCE_ID",
+              "public_ip": "$PUBLIC_IP",
+              "private_ip": "$PRIVATE_IP",
+              "ssh_key_name": "$SSH_KEY_NAME",
+              "ssh_key_ssm_parameter": "$SSH_KEY_SSM_PARAM",
+              "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            }
+          }
+          EOF
+          
+          # Merge bastion info into nagios state file
+          jq -s '.[0] * .[1]' nagios_state.json bastion_info.json > updated_state.json
+          
+          # Upload updated state back to S3
+          aws s3 cp updated_state.json s3://${{ inputs.bucket_name }}/nagios/terraform.tfstate
 
