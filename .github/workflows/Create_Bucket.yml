@@ -117,9 +117,9 @@ jobs:
       - name: Import existing resources 
         if: inputs.action == 'destroy_bucket'
         run: |
-          terraform import aws_s3_bucket.tf_state "${{ inputs.bucket }}" 2>/dev/null || true
-          terraform import aws_s3_bucket_versioning.tf_state "${{ inputs.bucket }}" 2>/dev/null || true
-          terraform import aws_s3_bucket_server_side_encryption_configuration.tf_state "${{ inputs.bucket }}" 2>/dev/null || true
+          terraform import aws_s3_bucket.tf_state "${{ inputs.bucket }}" 
+          terraform import aws_s3_bucket_versioning.tf_state "${{ inputs.bucket }}" 
+          terraform import aws_s3_bucket_server_side_encryption_configuration.tf_state "${{ inputs.bucket }}" 
 
       - name: Terraform Apply
         if: inputs.action == 'create_bucket'
@@ -127,5 +127,5 @@ jobs:
 
       - name: Terraform Destroy
         if: inputs.action == 'destroy_bucket'
-        run: terraform destroy -auto-approve || true
+        run: terraform destroy -auto-approve 
 
