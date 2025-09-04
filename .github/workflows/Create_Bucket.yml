@@ -4,32 +4,32 @@ on:
   workflow_dispatch:
     inputs:
       action:
-        description: "Choose whether to apply or destroy"
+        description: "Create or destroy s3 bucket"
         required: true
         type: choice
         options:
           - create_bucket
           - destroy_bucket
       aws_account:
-        description: "AWS Account to use"
+        description: "Choose AWS Account to use"
         required: true
         type: choice
         options:
           - alexander-test
           - emir-production
-      terraform_repo:
-        description: "Private GitHub repository with Terraform code"
-        required: true
-        type: string
-        default: "DevOps-Triumvirat/ProjectNagios"
       bucket:
         description: "S3 bucket name for Terraform state file"
         required: true
         type: string
       region:
-        description: "AWS region"
+        description: "Choose AWS region"
         required: true
-        type: string
+        type: choice
+        options:
+          - us-east-1
+          - us-east-2
+          - us-west-1
+          - us-west-2
 
         
 jobs:
@@ -37,12 +37,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Private Repository
+      - name: Checkout Repository
         uses: actions/checkout@v4
-        with:
-          repository: ${{ inputs.terraform_repo }}
-          token: ${{ secrets.PRIVATE_REPO_TOKEN }}
-          path: terraform-project
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -66,7 +62,6 @@ jobs:
           aws-region: ${{ inputs.region }}
 
       - name: Write Terraform config for S3 backend + bucket
-        working-directory: terraform-project
         run: |
           cat > bucket-main.tf <<EOF
           terraform {
@@ -106,15 +101,12 @@ jobs:
           EOF
 
       - name: Terraform Init
-        working-directory: terraform-project
         run: terraform init -reconfigure
 
       - name: Terraform Apply
         if: inputs.action == 'create_bucket'
-        working-directory: terraform-project
         run: terraform apply -auto-approve
 
       - name: Terraform Destroy
         if: inputs.action == 'destroy_bucket'
-        working-directory: terraform-project
         run: terraform destroy -auto-approve
