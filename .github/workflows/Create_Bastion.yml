@@ -4,26 +4,30 @@ on:
   workflow_dispatch:
     inputs:
       action:
-        description: "Create or destroy s3 bucket"
+        description: "Action to perform"
         required: true
         type: choice
         options:
-          - create_bucket
-          - destroy_bucket
-      bucket:
-        description: "S3 bucket name (must be unique)"
-        required: true
-        type: string
+          - apply
+          - destroy
+        default: "apply"
+
       aws_account:
-        description: "Choose AWS Account to use"
+        description: "AWS Account to use"
         required: true
         type: choice
         options:
           - alexander-test
           - eliza-dev
           - emir-production
-      region:
-        description: "Choose AWS region"
+
+      bucket_name:
+        description: "S3 bucket name for Terraform state"
+        required: true
+        type: string
+
+      bucket_region:
+        description: "S3 bucket region"
         required: true
         type: choice
         options:
@@ -31,111 +35,146 @@ on:
           - us-east-2
           - us-west-1
           - us-west-2
-        
+
+      bastion_instance_region:
+        description: "Bastion instance region"
+        required: true
+        type: choice
+        options:
+          - ca-central-1
+          - us-east-1
+          - us-east-2
+          - us-west-1
+          - us-west-2
+
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
+    environment: ${{ inputs.bastion_instance_region }}
     steps:
-      - name: Checkout Repository
+      - name: Checkout Current Repository (ProjectNagiosWorkflows)
         uses: actions/checkout@v4
+        with:
+          path: ProjectNagiosWorkflows
+
+      - name: Checkout Private Repository (ProjectNagios)
+        uses: actions/checkout@v4
+        with:
+          repository: "DevOps-Triumvirat/ProjectNagios"
+          token: ${{ secrets.PRIVATE_REPO_TOKEN }}
+          path: ProjectNagios
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.12.2"
 
-      - name: Configure AWS Credentials for Test Account
-        if: inputs.aws_account == 'alexander-test'
-        uses: aws-actions/configure-aws-credentials@v4.3.1
+      - name: Configure AWS Credentials (Eliza Dev)
+        if: ${{ inputs.aws_account == 'eliza-dev' }}
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: "${{ secrets.AWS_ACCESS_KEY_ID_TEST }}"
-          aws-secret-access-key: "${{ secrets.AWS_SECRET_ACCESS_KEY_TEST }}"
-          aws-region: ${{ inputs.region }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_DEV }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_DEV }}
+          aws-region: ${{ inputs.bastion_instance_region }}
 
-      - name: Configure AWS Credentials for Production Account
-        if: inputs.aws_account == 'emir-production'
-        uses: aws-actions/configure-aws-credentials@v4.3.1
+      - name: Configure AWS Credentials (Alexander Test)
+        if: ${{ inputs.aws_account == 'alexander-test' }}
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: "${{ secrets.AWS_ACCESS_KEY_ID_PRODUCTION }}"
-          aws-secret-access-key: "${{ secrets.AWS_SECRET_ACCESS_KEY_PRODUCTION }}"
-          aws-region: ${{ inputs.region }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_TEST }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_TEST }}
+          aws-region: ${{ inputs.bastion_instance_region }}
 
-      - name: Configure AWS Credentials for Dev Account
-        if: inputs.aws_account == 'eliza-dev'
-        uses: aws-actions/configure-aws-credentials@v4.3.1
+      - name: Configure AWS Credentials (Emir Production)
+        if: ${{ inputs.aws_account == 'emir-production' }}
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: "${{ secrets.AWS_ACCESS_KEY_ID_DEV }}"
-          aws-secret-access-key: "${{ secrets.AWS_SECRET_ACCESS_KEY_DEV }}"
-          aws-region: ${{ inputs.region }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_PRODUCTION }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_PRODUCTION }}
+          aws-region: ${{ inputs.bastion_instance_region }}
 
-      - name: Write Terraform config for S3 bucket creation
+      - name: Create terraform.tfvars from environment secret and inputs
+        working-directory: ProjectNagios/Terraform/Alexander/Bastion
         run: |
-          cat > bucket-main.tf <<EOF
-          terraform {
-            required_providers {
-              aws = {
-                source  = "hashicorp/aws"
-                version = "~> 5.0"
-              }
-            }
-          }
-
-          provider "aws" {
-            region = "${{ inputs.region }}"
-          }
-
-          # Create S3 bucket for tfstate with object lock enabled
-          resource "aws_s3_bucket" "tf_state" {
-            bucket        = "${{ inputs.bucket }}"
-            object_lock_enabled = true           
-          }
-
-          # Enable versioning
-          resource "aws_s3_bucket_versioning" "tf_state" {
-            bucket = aws_s3_bucket.tf_state.id
-            versioning_configuration {
-              status = "Enabled"
-            }
-          }
-
-          # Enable encryption
-          resource "aws_s3_bucket_server_side_encryption_configuration" "tf_state" {
-            bucket = aws_s3_bucket.tf_state.id
-            rule {
-              apply_server_side_encryption_by_default {
-                sse_algorithm = "AES256"
-              }
-            }
-          }
-
-          EOF
+          # Create base terraform.tfvars from secrets
+          echo "${{ secrets.TERRAFORM_TFVARS }}" > terraform.tfvars
+          
+          # Use sed to update existing variables or add them if they don't exist
+          # Update region
+          if grep -q "^region" terraform.tfvars; then
+            sed -i 's/^region = .*/region = "${{ inputs.bastion_instance_region }}"/g' terraform.tfvars
+          else
+            echo "region = \"${{ inputs.bastion_instance_region }}\"" >> terraform.tfvars
+          fi
+          
+          # Update key_name
+          if grep -q "^key_name" terraform.tfvars; then
+            sed -i 's/^key_name = .*/key_name = "generated-bastion-key"/g' terraform.tfvars
+          else
+            echo "key_name = \"generated-bastion-key\"" >> terraform.tfvars
+          fi
+          
+          # Update instance_type
+          if grep -q "^instance_type" terraform.tfvars; then
+            sed -i 's/^instance_type = .*/instance_type = "t3.micro"/g' terraform.tfvars
+          else
+            echo "instance_type = \"t3.micro\"" >> terraform.tfvars
+          fi
 
       - name: Terraform Init
-        run: terraform init
-
-      - name: Import existing resources 
-        if: inputs.action == 'destroy_bucket'
+        working-directory: ProjectNagios/Terraform/Alexander/Bastion
         run: |
-          terraform import aws_s3_bucket.tf_state "${{ inputs.bucket }}" 
-          terraform import aws_s3_bucket_versioning.tf_state "${{ inputs.bucket }}" 
-          terraform import aws_s3_bucket_server_side_encryption_configuration.tf_state "${{ inputs.bucket }}" 
+          terraform init \
+            -backend-config="bucket=${{ inputs.bucket_name }}" \
+            -backend-config="key=bastion/terraform.tfstate" \
+            -backend-config="region=${{ inputs.bucket_region }}"
+
+      - name: Terraform Plan
+        working-directory: ProjectNagios/Terraform/Alexander/Bastion
+        run: terraform plan -var-file="terraform.tfvars"
 
       - name: Terraform Apply
-        if: inputs.action == 'create_bucket'
-        run: terraform apply -auto-approve
-
-      - name: Create empty nagios/terraform.tfstate file
-        if: inputs.action == 'create_bucket'
-        run: |
-          # Create an empty terraform state file for nagios (not the bucket creation state)
-          echo '{}' > empty_nagios_state.json
-          
-          # Upload the empty state file to the nagios folder
-          aws s3 cp empty_nagios_state.json s3://${{ inputs.bucket }}/nagios/terraform.tfstate
-          echo "Created empty nagios/terraform.tfstate file in bucket ${{ inputs.bucket }}"
+        if: inputs.action == 'apply'
+        working-directory: ProjectNagios/Terraform/Alexander/Bastion
+        run: terraform apply -auto-approve -var-file="terraform.tfvars"
 
       - name: Terraform Destroy
-        if: inputs.action == 'destroy_bucket'
-        run: terraform destroy -auto-approve 
+        if: inputs.action == 'destroy'
+        working-directory: ProjectNagios/Terraform/Alexander/Bastion
+        run: terraform destroy -auto-approve -var-file="terraform.tfvars"
+
+      - name: Update Nagios Terraform State with Bastion Info
+        if: inputs.action == 'apply'
+        working-directory: ProjectNagios/Terraform/Alexander/Bastion
+        run: |
+          # Download the existing nagios terraform.tfstate
+          aws s3 cp s3://${{ inputs.bucket_name }}/nagios/terraform.tfstate nagios_state.json || echo '{}' > nagios_state.json
+          
+          # Get bastion instance information
+          INSTANCE_ID=$(terraform output -raw bastion_instance_id)
+          PUBLIC_IP=$(terraform output -raw bastion_public_ip)
+          PRIVATE_IP=$(terraform output -raw bastion_private_ip)
+          SSH_KEY_NAME=$(terraform output -raw ssh_key_name)
+          SSH_KEY_SSM_PARAM=$(terraform output -raw private_key_ssm_parameter)
+          
+          # Create bastion info JSON and merge with existing state
+          cat > bastion_info.json << EOF
+          {
+            "bastion_instance": {
+              "instance_id": "$INSTANCE_ID",
+              "public_ip": "$PUBLIC_IP",
+              "private_ip": "$PRIVATE_IP",
+              "ssh_key_name": "$SSH_KEY_NAME",
+              "ssh_key_ssm_parameter": "$SSH_KEY_SSM_PARAM",
+              "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            }
+          }
+          EOF
+          
+          # Merge bastion info into nagios state file
+          jq -s '.[0] * .[1]' nagios_state.json bastion_info.json > updated_state.json
+          
+          # Upload updated state back to S3
+          aws s3 cp updated_state.json s3://${{ inputs.bucket_name }}/nagios/terraform.tfstate
 
