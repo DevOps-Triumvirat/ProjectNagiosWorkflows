@@ -1,0 +1,107 @@
+name: Deploy Nagios Infrastructure
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "Choose whether to apply or destroy"
+        required: true
+        type: choice
+        options:
+          - apply
+          - destroy
+      region:
+        description: "AWS region"
+        required: true
+        type: choice
+        options:
+          - us-east-1
+          - us-east-2
+          - us-west-1
+          - us-west-2
+      aws_account:
+        description: "AWS Account to use"
+        required: true
+        type: choice
+        options:
+          - alexander-test
+          - emir-production
+      terraform_repo:
+        description: "Private GitHub repository with Terraform code"
+        required: true
+        type: string
+        default: "YOUR_USERNAME/YOUR_PRIVATE_REPO_NAME"
+      bucket_name:
+        description: "S3 bucket name for Terraform state"
+        required: true
+        type: string
+      bucket_region:
+        description: "S3 bucket region"
+        required: true
+        type: choice
+        options:
+          - us-east-1
+          - us-east-2
+          - us-west-1
+          - us-west-2
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.region }}
+    
+    steps:
+      - name: Checkout Private Repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.terraform_repo }}
+          token: ${{ secrets.PRIVATE_REPO_TOKEN }}
+          path: nagios-project
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.12.2"
+
+      - name: Configure AWS Credentials for Alexander Test
+        if: inputs.aws_account == 'alexander-test'
+        uses: aws-actions/configure-aws-credentials@v4.3.1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_TEST }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_TEST }}
+          aws-region: ${{ inputs.region }}
+
+      - name: Configure AWS Credentials for Emir Production
+        if: inputs.aws_account == 'emir-production'
+        uses: aws-actions/configure-aws-credentials@v4.3.1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_PRODUCTION }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_PRODUCTION }}
+          aws-region: ${{ inputs.region }}
+
+      - name: Create terraform.tfvars from environment secret
+        working-directory: nagios-project/Terraform/Alexander/Nagios
+        run: |
+          echo "${{ secrets.TERRAFORM_TFVARS }}" > terraform.tfvars
+
+      - name: Terraform Init
+        working-directory: nagios-project/Terraform/Alexander/Nagios
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ inputs.bucket_name }}" \
+            -backend-config="key=nagios/terraform.tfstate" \
+            -backend-config="region=${{ inputs.bucket_region }}"
+
+      - name: Terraform Plan
+        working-directory: nagios-project/Terraform/Alexander/Nagios
+        run: terraform plan -var-file="terraform.tfvars"
+
+      - name: Terraform Apply
+        if: inputs.action == 'apply'
+        working-directory: nagios-project/Terraform/Alexander/Nagios
+        run: terraform apply -auto-approve -var-file="terraform.tfvars"
+
+      - name: Terraform Destroy
+        if: inputs.action == 'destroy'
+        working-directory: nagios-project/Terraform/Alexander/Nagios
+        run: terraform destroy -auto-approve -var-file="terraform.tfvars"
