@@ -1,4 +1,4 @@
-name: Deploy Nagios Infrastructure
+name: Nagios Infrastructure Deployment
 
 on:
   workflow_dispatch:
@@ -25,6 +25,7 @@ on:
         type: choice
         options:
           - alexander-test
+          - eliza-dev
           - emir-production
       terraform_repo:
         description: "Private GitHub repository with Terraform code"
@@ -62,6 +63,14 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.12.2"
+
+      - name: Configure AWS Credentials for Dev Account
+        if: inputs.aws_account == 'eliza-dev'
+        uses: aws-actions/configure-aws-credentials@v4.3.1
+        with:
+          aws-access-key-id: "${{ secrets.AWS_ACCESS_KEY_ID_DEV }}"
+          aws-secret-access-key: "${{ secrets.AWS_SECRET_ACCESS_KEY_DEV }}"
+          aws-region: ${{ inputs.region }}
 
       - name: Configure AWS Credentials for Alexander Test
         if: inputs.aws_account == 'alexander-test'
