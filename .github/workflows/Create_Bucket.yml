@@ -108,7 +108,6 @@ jobs:
               }
             }
           }
-
           }
 
           EOF
@@ -116,13 +115,12 @@ jobs:
       - name: Terraform Init
         run: terraform init
 
-      - name: Import existing resources (for destroy operation)
+      - name: Import existing resources 
         if: inputs.action == 'destroy_bucket'
         run: |
           terraform import aws_s3_bucket.tf_state "${{ inputs.bucket }}" 2>/dev/null || true
           terraform import aws_s3_bucket_versioning.tf_state "${{ inputs.bucket }}" 2>/dev/null || true
           terraform import aws_s3_bucket_server_side_encryption_configuration.tf_state "${{ inputs.bucket }}" 2>/dev/null || true
-
 
       - name: Terraform Apply
         if: inputs.action == 'create_bucket'
