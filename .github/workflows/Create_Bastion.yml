@@ -1,4 +1,4 @@
-name: Create_Bucket
+name: Create Bastion Instance
 
 on:
   workflow_dispatch:
