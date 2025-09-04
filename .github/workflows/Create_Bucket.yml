@@ -21,7 +21,7 @@ on:
         description: "Private GitHub repository with Terraform code"
         required: true
         type: string
-        default: "YOUR_ORG/YOUR_PRIVATE_REPO_NAME"
+        default: "DevOps-Triumvirat/ProjectNagios"
       bucket:
         description: "S3 bucket name for Terraform state file"
         required: true
