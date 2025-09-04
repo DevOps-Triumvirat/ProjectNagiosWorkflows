@@ -44,6 +44,7 @@ on:
         type: string
         default: "bastion-key"
 
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
