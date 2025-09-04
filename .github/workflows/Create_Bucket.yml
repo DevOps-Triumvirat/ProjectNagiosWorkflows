@@ -18,7 +18,7 @@ on:
           - alexander-test
           - emir-production
       bucket:
-        description: "S3 bucket name for Terraform state file"
+        description: "S3 bucket name(must be unique)"
         required: true
         type: string
       region:
@@ -30,7 +30,6 @@ on:
           - us-east-2
           - us-west-1
           - us-west-2
-
         
 jobs:
   deploy:
@@ -77,9 +76,10 @@ jobs:
             region = "${{ inputs.region }}"
           }
 
-          # Create S3 bucket for tfstate
+          # Create S3 bucket for tfstate with object lock enabled
           resource "aws_s3_bucket" "tf_state" {
-            bucket = "${{ inputs.bucket }}"
+            bucket        = "${{ inputs.bucket }}"
+            object_lock_enabled = true
             
           }
 
@@ -101,47 +101,29 @@ jobs:
             }
           }
 
-          # Block public access
-          resource "aws_s3_bucket_public_access_block" "tf_state" {
+          # S3 Object Lock configuration for state file protection
+          resource "aws_s3_bucket_object_lock_configuration" "tf_state" {
             bucket = aws_s3_bucket.tf_state.id
-
-            block_public_acls       = true
-            block_public_policy     = true
-            ignore_public_acls      = true
-            restrict_public_buckets = true
+            rule {
+              default_retention {
+                mode = "GOVERNANCE"
+                days = 1
+              }
+            }
           }
 
-          # Output bucket name for confirmation
-          output "bucket_name" {
-            value = aws_s3_bucket.tf_state.bucket
-          }
-
-          output "bucket_arn" {
-            value = aws_s3_bucket.tf_state.arn
-          }
           EOF
 
       - name: Terraform Init
         run: terraform init
 
-      - name: Import existing bucket resources (for destroy operation)
+      - name: Import existing resources (for destroy operation)
         if: inputs.action == 'destroy_bucket'
         run: |
-          echo "Attempting to import existing bucket resources..."
-          
-          # Try to import the main bucket - this will fail if bucket doesn't exist
-          terraform import aws_s3_bucket.tf_state "${{ inputs.bucket }}" || echo "Bucket import failed - bucket may not exist"
-          
-          # Try to import other resources (these may fail if not configured)
-          terraform import aws_s3_bucket_versioning.tf_state "${{ inputs.bucket }}" || echo "Versioning import failed or not configured"
-          terraform import aws_s3_bucket_server_side_encryption_configuration.tf_state "${{ inputs.bucket }}" || echo "Encryption import failed or not configured"
-          terraform import aws_s3_bucket_public_access_block.tf_state "${{ inputs.bucket }}" || echo "Public access block import failed or not configured"
-          
-          echo "Import phase completed"
-
-      - name: Terraform Plan (for verification)
-        run: terraform plan
-        continue-on-error: true
+          terraform import aws_s3_bucket.tf_state "${{ inputs.bucket }}" || true
+          terraform import aws_s3_bucket_versioning.tf_state "${{ inputs.bucket }}" || true
+          terraform import aws_s3_bucket_server_side_encryption_configuration.tf_state "${{ inputs.bucket }}" || true
+          terraform import aws_s3_bucket_object_lock_configuration.tf_state "${{ inputs.bucket }}" || true
 
       - name: Terraform Apply
         if: inputs.action == 'create_bucket'
@@ -149,6 +131,4 @@ jobs:
 
       - name: Terraform Destroy
         if: inputs.action == 'destroy_bucket'
-        run: |
-          echo "Attempting to destroy bucket resources..."
-          terraform destroy -auto-approve || echo "Destroy completed or resources were already absent"
+        run: terraform destroy -auto-approve || true
