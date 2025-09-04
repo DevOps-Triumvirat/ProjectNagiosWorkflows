@@ -41,6 +41,16 @@ on:
           - us-east-2
           - us-west-1
           - us-west-2
+      bastion_instance_region:
+        description: "Bastion instance region"
+        required: true
+        type: string
+        default: "ca-central-1"
+      bastion_instance_key:
+        description: "Bastion instance key pair name"
+        required: true
+        type: string
+        default: "bastion-key"
 
 jobs:
   deploy:
@@ -56,7 +66,7 @@ jobs:
       - name: Checkout Private Repository (ProjectNagios)
         uses: actions/checkout@v4
         with:
-          repository: "DevOps-Triumvirat/ProjectNagios"
+          repository: "DevOps-Triumvira/ProjectNagios"
           token: ${{ secrets.PRIVATE_REPO_TOKEN }}
           path: ProjectNagios
 
@@ -89,10 +99,14 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_PRODUCTION }}
           aws-region: ${{ inputs.region }}
 
-      - name: Create terraform.tfvars from environment secret
+      - name: Create terraform.tfvars from environment secret and inputs
         working-directory: ProjectNagios/Terraform/Alexander/Nagios
         run: |
           echo "${{ secrets.TERRAFORM_TFVARS }}" > terraform.tfvars
+          echo "" >> terraform.tfvars
+          echo "# Bastion instance configuration from workflow inputs" >> terraform.tfvars
+          echo "bastion_instance_region = \"${{ inputs.bastion_instance_region }}\"" >> terraform.tfvars
+          echo "bastion_instance_key = \"${{ inputs.bastion_instance_key }}\"" >> terraform.tfvars
 
       - name: Terraform Init
         working-directory: ProjectNagios/Terraform/Alexander/Nagios
