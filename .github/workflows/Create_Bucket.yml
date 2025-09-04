@@ -1,0 +1,120 @@
+name: ProjectCreateBucket
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "Choose whether to apply or destroy"
+        required: true
+        type: choice
+        options:
+          - create_bucket
+          - destroy_bucket
+      aws_account:
+        description: "AWS Account to use"
+        required: true
+        type: choice
+        options:
+          - alexander-test
+          - emir-production
+      terraform_repo:
+        description: "Private GitHub repository with Terraform code"
+        required: true
+        type: string
+        default: "YOUR_ORG/YOUR_PRIVATE_REPO_NAME"
+      bucket:
+        description: "S3 bucket name for Terraform state file"
+        required: true
+        type: string
+      region:
+        description: "AWS region"
+        required: true
+        type: string
+
+        
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Private Repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.terraform_repo }}
+          token: ${{ secrets.PRIVATE_REPO_TOKEN }}
+          path: terraform-project
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.12.2"
+
+      - name: Configure AWS Credentials for Test Account
+        if: inputs.aws_account == 'alexander-test'
+        uses: aws-actions/configure-aws-credentials@v4.3.1
+        with:
+          aws-access-key-id: "${{ secrets.AWS_ACCESS_KEY_ID_TEST }}"
+          aws-secret-access-key: "${{ secrets.AWS_SECRET_ACCESS_KEY_TEST }}"
+          aws-region: ${{ inputs.region }}
+
+      - name: Configure AWS Credentials for Production Account
+        if: inputs.aws_account == 'emir-production'
+        uses: aws-actions/configure-aws-credentials@v4.3.1
+        with:
+          aws-access-key-id: "${{ secrets.AWS_ACCESS_KEY_ID_PRODUCTION }}"
+          aws-secret-access-key: "${{ secrets.AWS_SECRET_ACCESS_KEY_PRODUCTION }}"
+          aws-region: ${{ inputs.region }}
+
+      - name: Write Terraform config for S3 backend + bucket
+        working-directory: terraform-project
+        run: |
+          cat > bucket-main.tf <<EOF
+          terraform {
+            backend "s3" {
+              bucket = "${{ inputs.bucket }}"
+              key = "bucket-management/${{ inputs.aws_account }}/terraform.tfstate"
+              region = "${{ inputs.region }}"
+            }
+          }
+
+          provider "aws" {
+            region = "${{ inputs.region }}"
+          }
+
+          # Create S3 bucket for tfstate
+          resource "aws_s3_bucket" "tf_state" {
+            bucket = "${{ inputs.bucket }}"
+          }
+
+          # Enable versioning
+          resource "aws_s3_bucket_versioning" "tf_state" {
+            bucket = aws_s3_bucket.tf_state.id
+            versioning_configuration {
+              status = "Enabled"
+            }
+          }
+
+          # Enable server-side encryption
+          resource "aws_s3_bucket_server_side_encryption_configuration" "tf_state" {
+            bucket = aws_s3_bucket.tf_state.id
+            rule {
+              apply_server_side_encryption_by_default {
+                sse_algorithm = "AES256"
+              }
+            }
+          }
+          EOF
+
+      - name: Terraform Init
+        working-directory: terraform-project
+        run: terraform init -reconfigure
+
+      - name: Terraform Apply
+        if: inputs.action == 'create_bucket'
+        working-directory: terraform-project
+        run: terraform apply -auto-approve
+
+      - name: Terraform Destroy
+        if: inputs.action == 'destroy_bucket'
+        working-directory: terraform-project
+        run: terraform destroy -auto-approve
