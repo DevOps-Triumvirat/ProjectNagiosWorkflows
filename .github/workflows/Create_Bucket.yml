@@ -1,4 +1,4 @@
-name: Create_Bucket
+name: Create s3 Bucket
 
 on:
   workflow_dispatch:
