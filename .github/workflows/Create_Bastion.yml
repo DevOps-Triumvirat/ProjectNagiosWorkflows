@@ -49,19 +49,24 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     environment: ${{ inputs.bastion_instance_region }}
-
     steps:
       - name: Checkout Current Repository (ProjectNagiosWorkflows)
         uses: actions/checkout@v4
         with:
           path: ProjectNagiosWorkflows
 
+      - name: Checkout Private Repository (ProjectNagios)
+        uses: actions/checkout@v4
+        with:
+          repository: "DevOps-Triumvirat/ProjectNagios"
+          token: ${{ secrets.PRIVATE_REPO_TOKEN }}
+          path: ProjectNagios
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.12.2"
 
-      # Configure AWS credentials dynamically based on selected account
       - name: Configure AWS Credentials (Eliza Dev)
         if: ${{ inputs.aws_account == 'eliza-dev' }}
         uses: aws-actions/configure-aws-credentials@v4
@@ -86,11 +91,19 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_PRODUCTION }}
           aws-region: ${{ inputs.bastion_instance_region }}
 
-      # Terraform Init & Apply
-      - name: Terraform Init
-        working-directory: ProjectNagiosWorkflows/terraform/bastion
-        run: terraform init -backend-config="bucket=${{ inputs.bucket_name }}" -backend-config="region=${{ inputs.bucket_region }}"
+      - name: Create terraform.tfvars from environment secret and inputs
+        working-directory: ProjectNagios/Terraform/Alexander/Nagios
+
+      - name: Terraform Plan
+        working-directory: ProjectNagios/Terraform/Alexander/Nagios
+        run: terraform plan -var-file="terraform.tfvars"
 
       - name: Terraform Apply
-        working-directory: ProjectNagiosWorkflows/terraform/bastion
-        run: terraform apply -auto-approve -var "key_name=${{ inputs.bastion_instance_key }}" -var "region=${{ inputs.bastion_instance_region }}"
+        if: inputs.action == 'apply'
+        working-directory: ProjectNagios/Terraform/Alexander/Nagios
+        run: terraform apply -auto-approve -var-file="terraform.tfvars"
+
+      - name: Terraform Destroy
+        if: inputs.action == 'destroy'
+        working-directory: ProjectNagios/Terraform/Alexander/Nagios
+        run: terraform destroy -auto-approve -var-file="terraform.tfvars"
