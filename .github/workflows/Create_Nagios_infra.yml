@@ -1,4 +1,4 @@
-name: Crreate Nagios Infrastructure
+name: Create Nagios Infrastructure
 
 on:
   workflow_dispatch:
