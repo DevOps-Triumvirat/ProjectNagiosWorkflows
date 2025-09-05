@@ -44,13 +44,15 @@ on:
       bastion_instance_region:
         description: "Bastion instance region"
         required: true
-        type: string
+        type: choice
+        options:
+          - us-east-1
+          - us-east-2
+          - us-west-1
+          - us-west-2
+          - "ca-central-1"
         default: "ca-central-1"
-      bastion_instance_key:
-        description: "Bastion instance key pair name"
-        required: true
-        type: string
-        default: "bastion-key"
+
 
 jobs:
   deploy:
@@ -106,7 +108,7 @@ jobs:
           echo "" >> terraform.tfvars
           echo "# Bastion instance configuration from workflow inputs" >> terraform.tfvars
           echo "bastion_instance_region = \"${{ inputs.bastion_instance_region }}\"" >> terraform.tfvars
-          echo "bastion_instance_key = \"${{ inputs.bastion_instance_key }}\"" >> terraform.tfvars
+          echo "bastion_instance_key = \"generated-bastion-key\"" >> terraform.tfvars
 
       - name: Terraform Init
         working-directory: ProjectNagios/Terraform/Alexander/Nagios
