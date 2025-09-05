@@ -134,6 +134,26 @@ jobs:
       - name: Terraform Init
         run: terraform init
 
+      - name: Empty S3 bucket before destruction
+        if: inputs.action == 'destroy'
+        run: |
+          # Remove all objects and versions from the bucket
+          aws s3 rm s3://${{ inputs.bucket }} --recursive
+          
+          # Remove all object versions (for versioned buckets)
+          aws s3api list-object-versions --bucket "${{ inputs.bucket }}" --query 'Versions[].{Key:Key,VersionId:VersionId}' --output text | while read key version; do
+            if [ ! -z "$key" ] && [ ! -z "$version" ]; then
+              aws s3api delete-object --bucket "${{ inputs.bucket }}" --key "$key" --version-id "$version"
+            fi
+          done
+          
+          # Remove all delete markers
+          aws s3api list-object-versions --bucket "${{ inputs.bucket }}" --query 'DeleteMarkers[].{Key:Key,VersionId:VersionId}' --output text | while read key version; do
+            if [ ! -z "$key" ] && [ ! -z "$version" ]; then
+              aws s3api delete-object --bucket "${{ inputs.bucket }}" --key "$key" --version-id "$version"
+            fi
+          done
+
       - name: Import existing resources 
         if: inputs.action == 'destroy'
         run: |
