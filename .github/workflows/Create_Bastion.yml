@@ -20,6 +20,7 @@ on:
           - alexander-test
           - eliza-dev
           - emir-production
+
       bastion_instance_region:
         description: "Bastion instance region"
         required: true
@@ -45,6 +46,16 @@ on:
           - us-east-2
           - us-west-1
           - us-west-2
+
+      instance_type:
+        description: "EC2 instance type for bastion host"
+        required: true
+        type: choice
+        options:
+          - t2.nano
+          - t2.micro
+          - t3.micro
+        default: "t3.micro"
 
 
 jobs:
@@ -119,9 +130,9 @@ jobs:
           
           # Update instance_type
           if grep -q "^instance_type" terraform.tfvars; then
-            sed -i 's/^instance_type = .*/instance_type = "t3.micro"/g' terraform.tfvars
+            sed -i 's/^instance_type = .*/instance_type = "${{ inputs.instance_type }}"/g' terraform.tfvars
           else
-            echo "instance_type = \"t3.micro\"" >> terraform.tfvars
+            echo "instance_type = \"${{ inputs.instance_type }}\"" >> terraform.tfvars
           fi
 
       - name: Terraform Init
@@ -179,4 +190,3 @@ jobs:
           
           # Upload updated state back to S3
           aws s3 cp updated_state.json s3://${{ inputs.bucket_name }}/nagios/terraform.tfstate
-
