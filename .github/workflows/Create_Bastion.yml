@@ -20,6 +20,16 @@ on:
           - alexander-test
           - eliza-dev
           - emir-production
+      bastion_instance_region:
+        description: "Bastion instance region"
+        required: true
+        type: choice
+        options:
+          - ca-central-1
+          - us-east-1
+          - us-east-2
+          - us-west-1
+          - us-west-2
 
       bucket_name:
         description: "S3 bucket name for Terraform state"
@@ -31,17 +41,6 @@ on:
         required: true
         type: choice
         options:
-          - us-east-1
-          - us-east-2
-          - us-west-1
-          - us-west-2
-
-      bastion_instance_region:
-        description: "Bastion instance region"
-        required: true
-        type: choice
-        options:
-          - ca-central-1
           - us-east-1
           - us-east-2
           - us-west-1
