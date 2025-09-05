@@ -104,14 +104,27 @@ jobs:
       - name: Create terraform.tfvars from environment secret and inputs
         working-directory: ProjectNagios/Terraform/Alexander/Nagios
         run: |
+          # Create base terraform.tfvars from secrets
           echo "${{ secrets.TERRAFORM_TFVARS }}" > terraform.tfvars
+          
+          # Remove any existing bastion variables to avoid duplicates
+          sed -i '/^bastion_instance_region/d' terraform.tfvars
+          sed -i '/^bastion_instance_key/d' terraform.tfvars
+          sed -i '/^bastion_state_bucket/d' terraform.tfvars
+          sed -i '/^bastion_state_region/d' terraform.tfvars
+          
+          # Add bastion configuration variables
           echo "" >> terraform.tfvars
           echo "# Bastion instance configuration from workflow inputs" >> terraform.tfvars
           echo "bastion_instance_region = \"${{ inputs.bastion_instance_region }}\"" >> terraform.tfvars
           echo "bastion_instance_key = \"generated-bastion-key\"" >> terraform.tfvars
-          echo "# Bastion state configuration for remote state access" >> terraform.tfvars
           echo "bastion_state_bucket = \"${{ inputs.bucket_name }}\"" >> terraform.tfvars
           echo "bastion_state_region = \"${{ inputs.bucket_region }}\"" >> terraform.tfvars
+          
+          # Debug: Show final terraform.tfvars content
+          echo "=== Generated terraform.tfvars content ==="
+          cat terraform.tfvars
+          echo "=========================================="
 
       - name: Terraform Init
         working-directory: ProjectNagios/Terraform/Alexander/Nagios
