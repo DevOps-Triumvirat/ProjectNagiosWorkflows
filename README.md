@@ -1,7 +1,20 @@
+### Dependencies
+- **External Repository**: DevOps-Triumvirat/ProjectNagios (contains Packer/Terraform configurations)
+- **Tools**: Packer 1.10.0, Terraform 1.12.2
+- **Required Secrets**: AWS credentials, TERRAFORM_TFVARS, PRIVATE_REPO_TOKEN
 
 This repository contains GitHub Actions workflows for automated deployment and management of Nagios monitoring infrastructure on AWS. The workflows orchestrate the creation of AMIs, EC2 instances, S3 buckets, and complete infrastructure setup using Packer and Terraform.
 
 All workflows are manually triggered via `workflow_dispatch` with required input parameters for account selection, regions, and configuration options.
+
+## Usage
+
+1. **Create S3 Bucket**: Run `Create_Bucket.yml` first to establish state storage
+2. **Build AMIs**: Run AMI creation workflows to build custom images
+3. **Deploy Bastion**: Run `Create_Bastion.yml` to create secure jump host
+4. **Deploy Nagios**: Run `Create_Nagios_infra.yml` to deploy monitoring infrastructure
+5. **Cleanup**: Use `Destroy_ALL.yml` for complete environment teardown
+   
 
 ## Project Structure
 
@@ -84,16 +97,4 @@ All workflows support three AWS account environments:
 - Cross-workflow state sharing for Bastion/Nagios integration
 - Proper credential management using GitHub Secrets
 
-### Dependencies
-- **External Repository**: DevOps-Triumvirat/ProjectNagios (contains Packer/Terraform configurations)
-- **Tools**: Packer 1.10.0, Terraform 1.12.2
-- **Required Secrets**: AWS credentials, TERRAFORM_TFVARS, PRIVATE_REPO_TOKEN
-
-## Usage
-
-1. **Create S3 Bucket**: Run `Create_Bucket.yml` first to establish state storage
-2. **Build AMIs**: Run AMI creation workflows to build custom images
-3. **Deploy Bastion**: Run `Create_Bastion.yml` to create secure jump host
-4. **Deploy Nagios**: Run `Create_Nagios_infra.yml` to deploy monitoring infrastructure
-5. **Cleanup**: Use `Destroy_ALL.yml` for complete environment teardown
 
