@@ -47,7 +47,7 @@ on:
           - ca-central-1
         default: "us-east-1"
       instance_type:
-        description: "EC2 instance type for bastion host (for reference)"
+        description: "Ubuntu instance type for bastion host"
         required: true
         type: choice
         options:
