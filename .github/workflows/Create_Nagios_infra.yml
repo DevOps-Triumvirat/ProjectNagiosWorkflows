@@ -1,4 +1,4 @@
-name: Nagios Infrastructure Deployment
+name: Crreate Nagios Infrastructure
 
 on:
   workflow_dispatch:

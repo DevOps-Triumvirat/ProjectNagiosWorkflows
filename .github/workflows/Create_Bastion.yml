@@ -1,4 +1,4 @@
-name: Create Bastion Instance (Remote)
+name: Create Bastion Instance 
 
 on:
   workflow_dispatch:
