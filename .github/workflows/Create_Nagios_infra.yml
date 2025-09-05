@@ -4,14 +4,14 @@ on:
   workflow_dispatch:
     inputs:
       action:
-        description: "Create or destroy infrastructure for Nagios server"
+        description: "Create/destroy infrastructure for Nagios"
         required: true
         type: choice
         options:
           - apply
           - destroy
       region:
-        description: "AWS region"
+        description: "AWS region to deploy infrastructure"
         required: true
         type: choice
         options:
