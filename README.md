@@ -1,4 +1,3 @@
-# ProjectNagiosWorkflows
 
 This repository contains GitHub Actions workflows for automated deployment and management of Nagios monitoring infrastructure on AWS. The workflows orchestrate the creation of AMIs, EC2 instances, S3 buckets, and complete infrastructure setup using Packer and Terraform.
 
