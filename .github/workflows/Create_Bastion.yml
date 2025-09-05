@@ -100,6 +100,9 @@ jobs:
           # Create base terraform.tfvars from secrets
           echo "${{ secrets.TERRAFORM_TFVARS }}" > terraform.tfvars
           
+          # Remove subnet variable to use default VPC subnets
+          sed -i '/^subnet = /d' terraform.tfvars
+          
           # Use sed to update existing variables or add them if they don't exist
           # Update region
           if grep -q "^region" terraform.tfvars; then
@@ -177,3 +180,5 @@ jobs:
           
           # Upload updated state back to S3
           aws s3 cp updated_state.json s3://${{ inputs.bucket_name }}/nagios/terraform.tfstate
+
+
