@@ -102,7 +102,7 @@ jobs:
           aws-region: ${{ inputs.region }}
 
       - name: Create terraform.tfvars from environment secret and inputs
-        working-directory: ProjectNagios/Terraform/Alexander/Nagios
+        working-directory: ProjectNagios/Terraform/Nagios
         run: |
           # Create base terraform.tfvars from secrets
           echo "${{ secrets.TERRAFORM_TFVARS }}" > terraform.tfvars
@@ -127,7 +127,7 @@ jobs:
           echo "=========================================="
 
       - name: Terraform Init
-        working-directory: ProjectNagios/Terraform/Alexander/Nagios
+        working-directory: ProjectNagios/Terraform/Nagios
         run: |
           # Check if state file exists and is corrupted, remove it if needed
           aws s3 cp s3://${{ inputs.bucket_name }}/nagios/terraform.tfstate ./check_state.json || echo "No existing state file"
@@ -145,16 +145,15 @@ jobs:
             -backend-config="region=${{ inputs.bucket_region }}"
 
       - name: Terraform Plan
-        working-directory: ProjectNagios/Terraform/Alexander/Nagios
+        working-directory: ProjectNagios/Terraform/Nagios
         run: terraform plan -var-file="terraform.tfvars"
 
       - name: Terraform Apply
         if: inputs.action == 'apply'
-        working-directory: ProjectNagios/Terraform/Alexander/Nagios
+        working-directory: ProjectNagios/Terraform/Nagios
         run: terraform apply -auto-approve -var-file="terraform.tfvars"
 
       - name: Terraform Destroy
         if: inputs.action == 'destroy'
-        working-directory: ProjectNagios/Terraform/Alexander/Nagios
+        working-directory: ProjectNagios/Terraform/Nagios
         run: terraform destroy -auto-approve -var-file="terraform.tfvars"
-

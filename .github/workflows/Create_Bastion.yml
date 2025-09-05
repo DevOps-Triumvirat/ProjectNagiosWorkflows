@@ -1,4 +1,4 @@
-name: Create Bastion Instance 
+name: Create Bastion Instance
 
 on:
   workflow_dispatch:
@@ -21,17 +21,6 @@ on:
           - eliza-dev
           - emir-production
 
-      bastion_instance_region:
-        description: "Bastion instance region"
-        required: true
-        type: choice
-        options:
-          - ca-central-1
-          - us-east-1
-          - us-east-2
-          - us-west-1
-          - us-west-2
-
       bucket_name:
         description: "S3 bucket name for Terraform state"
         required: true
@@ -47,14 +36,25 @@ on:
           - us-west-1
           - us-west-2
 
+      bastion_instance_region:
+        description: "Bastion instance region"
+        required: true
+        type: choice
+        options:
+          - ca-central-1
+          - us-east-1
+          - us-east-2
+          - us-west-1
+          - us-west-2
+
       instance_type:
         description: "EC2 instance type for bastion host"
         required: true
         type: choice
         options:
-          - t2.nano
           - t2.micro
           - t3.micro
+          - t2.nano
         default: "t3.micro"
 
 
@@ -105,7 +105,7 @@ jobs:
           aws-region: ${{ inputs.bastion_instance_region }}
 
       - name: Create terraform.tfvars from environment secret and inputs
-        working-directory: ProjectNagios/Terraform/Alexander/Bastion
+        working-directory: ProjectNagios/Terraform/Bastion
         run: |
           # Create base terraform.tfvars from secrets
           echo "${{ secrets.TERRAFORM_TFVARS }}" > terraform.tfvars
@@ -136,7 +136,7 @@ jobs:
           fi
 
       - name: Terraform Init
-        working-directory: ProjectNagios/Terraform/Alexander/Bastion
+        working-directory: ProjectNagios/Terraform/Bastion
         run: |
           terraform init \
             -backend-config="bucket=${{ inputs.bucket_name }}" \
@@ -144,22 +144,22 @@ jobs:
             -backend-config="region=${{ inputs.bucket_region }}"
 
       - name: Terraform Plan
-        working-directory: ProjectNagios/Terraform/Alexander/Bastion
+        working-directory: ProjectNagios/Terraform/Bastion
         run: terraform plan -var-file="terraform.tfvars"
 
       - name: Terraform Apply
         if: inputs.action == 'apply'
-        working-directory: ProjectNagios/Terraform/Alexander/Bastion
+        working-directory: ProjectNagios/Terraform/Bastion
         run: terraform apply -auto-approve -var-file="terraform.tfvars"
 
       - name: Terraform Destroy
         if: inputs.action == 'destroy'
-        working-directory: ProjectNagios/Terraform/Alexander/Bastion
+        working-directory: ProjectNagios/Terraform/Bastion
         run: terraform destroy -auto-approve -var-file="terraform.tfvars"
 
       - name: Update Nagios Terraform State with Bastion Info
         if: inputs.action == 'apply'
-        working-directory: ProjectNagios/Terraform/Alexander/Bastion
+        working-directory: ProjectNagios/Terraform/Bastion
         run: |
           # Download the existing nagios terraform.tfstate
           aws s3 cp s3://${{ inputs.bucket_name }}/nagios/terraform.tfstate nagios_state.json || echo '{}' > nagios_state.json
