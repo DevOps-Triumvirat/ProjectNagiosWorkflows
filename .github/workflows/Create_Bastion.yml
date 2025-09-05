@@ -1,4 +1,4 @@
-name: Create Bastion Instance
+name: Create Bastion Instance 
 
 on:
   workflow_dispatch:
@@ -99,6 +99,9 @@ jobs:
         run: |
           # Create base terraform.tfvars from secrets
           echo "${{ secrets.TERRAFORM_TFVARS }}" > terraform.tfvars
+          
+          # Remove subnet variable if it exists (uses default VPC subnets)
+          sed -i '/^subnet = /d' terraform.tfvars
           
           # Use sed to update existing variables or add them if they don't exist
           # Update region
