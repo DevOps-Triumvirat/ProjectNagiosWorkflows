@@ -109,6 +109,9 @@ jobs:
           echo "# Bastion instance configuration from workflow inputs" >> terraform.tfvars
           echo "bastion_instance_region = \"${{ inputs.bastion_instance_region }}\"" >> terraform.tfvars
           echo "bastion_instance_key = \"generated-bastion-key\"" >> terraform.tfvars
+          echo "# Bastion state configuration for remote state access" >> terraform.tfvars
+          echo "bastion_state_bucket = \"${{ inputs.bucket_name }}\"" >> terraform.tfvars
+          echo "bastion_state_region = \"${{ inputs.bucket_region }}\"" >> terraform.tfvars
 
       - name: Terraform Init
         working-directory: ProjectNagios/Terraform/Alexander/Nagios
