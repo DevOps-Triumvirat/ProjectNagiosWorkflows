@@ -157,3 +157,4 @@ jobs:
         if: inputs.action == 'destroy'
         working-directory: ProjectNagios/Terraform/Alexander/Nagios
         run: terraform destroy -auto-approve -var-file="terraform.tfvars"
+
