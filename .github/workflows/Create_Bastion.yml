@@ -1,4 +1,4 @@
-name: Create Bastion Instance
+name: Create Bastion Instance (Remote)
 
 on:
   workflow_dispatch:
@@ -56,6 +56,33 @@ on:
           - t3.micro
           - t2.nano
         default: "t3.micro"
+
+  workflow_call:
+    inputs:
+      action:
+        description: "Action to perform"
+        required: true
+        type: string
+      aws_account:
+        description: "AWS Account to use"
+        required: true
+        type: string
+      bucket_name:
+        description: "S3 bucket name for Terraform state"
+        required: true
+        type: string
+      bucket_region:
+        description: "S3 bucket region"
+        required: true
+        type: string
+      bastion_instance_region:
+        description: "Bastion instance region"
+        required: true
+        type: string
+      instance_type:
+        description: "EC2 instance type for bastion host"
+        required: true
+        type: string
 
 
 jobs:

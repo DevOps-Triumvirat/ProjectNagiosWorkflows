@@ -4,30 +4,28 @@ on:
   workflow_dispatch:
     inputs:
       action:
-        description: "Create/destroy infrastructure for Nagios"
+        description: "Create or destroy infrastructure for Nagios server"
         required: true
         type: choice
         options:
           - apply
           - destroy
       region:
-        description: "AWS region to deploy infrastructure"
+        description: "AWS region"
         required: true
         type: choice
         options:
           - us-east-1
-          - us-east-2
-          - us-west-1
           - us-west-2
+          - eu-west-1
       aws_account:
-        description: "AWS Account to use"
+        description: "AWS account to use"
         required: true
         type: choice
         options:
           - alexander-test
           - eliza-dev
           - emir-production
-
       bucket_name:
         description: "S3 bucket name for Terraform state"
         required: true
@@ -38,21 +36,44 @@ on:
         type: choice
         options:
           - us-east-1
-          - us-east-2
-          - us-west-1
           - us-west-2
+          - eu-west-1
       bastion_instance_region:
-        description: "Bastion instance region"
+        description: "Region where the bastion instance is deployed"
         required: true
         type: choice
         options:
           - us-east-1
-          - us-east-2
-          - us-west-1
           - us-west-2
-          - "ca-central-1"
+          - eu-west-1
         default: "ca-central-1"
 
+  workflow_call:
+    inputs:
+      action:
+        description: "Create or destroy infrastructure for Nagios server"
+        required: true
+        type: string
+      region:
+        description: "AWS region"
+        required: true
+        type: string
+      aws_account:
+        description: "AWS account to use"
+        required: true
+        type: string
+      bucket_name:
+        description: "S3 bucket name for Terraform state"
+        required: true
+        type: string
+      bucket_region:
+        description: "S3 bucket region"
+        required: true
+        type: string
+      bastion_instance_region:
+        description: "Region where the bastion instance is deployed"
+        required: true
+        type: string
 
 jobs:
   deploy:

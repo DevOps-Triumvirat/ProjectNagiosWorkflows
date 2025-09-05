@@ -4,18 +4,19 @@ on:
   workflow_dispatch:
     inputs:
       action:
-        description: "Create or destroy s3 bucket"
+        description: "Action to perform on S3 bucket"
         required: true
         type: choice
         options:
-          - create_bucket
-          - destroy_bucket
+          - create
+          - destroy
+        default: "create"
       bucket:
-        description: "S3 bucket name (must be unique)"
+        description: "S3 bucket name"
         required: true
         type: string
       aws_account:
-        description: "Choose AWS Account to use"
+        description: "AWS Account to use"
         required: true
         type: choice
         options:
@@ -23,7 +24,7 @@ on:
           - eliza-dev
           - emir-production
       region:
-        description: "Choose AWS region"
+        description: "AWS region"
         required: true
         type: choice
         options:
@@ -31,7 +32,26 @@ on:
           - us-east-2
           - us-west-1
           - us-west-2
-        
+          - ca-central-1
+  workflow_call:
+    inputs:
+      action:
+        description: "Action to perform on S3 bucket"
+        required: true
+        type: string
+      bucket:
+        description: "S3 bucket name"
+        required: true
+        type: string
+      aws_account:
+        description: "AWS Account to use"
+        required: true
+        type: string
+      region:
+        description: "AWS region"
+        required: true
+        type: string
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -115,18 +135,18 @@ jobs:
         run: terraform init
 
       - name: Import existing resources 
-        if: inputs.action == 'destroy_bucket'
+        if: inputs.action == 'destroy'
         run: |
           terraform import aws_s3_bucket.tf_state "${{ inputs.bucket }}" 
           terraform import aws_s3_bucket_versioning.tf_state "${{ inputs.bucket }}" 
           terraform import aws_s3_bucket_server_side_encryption_configuration.tf_state "${{ inputs.bucket }}" 
 
       - name: Terraform Apply
-        if: inputs.action == 'create_bucket'
+        if: inputs.action == 'create'
         run: terraform apply -auto-approve
 
       - name: Create empty nagios/terraform.tfstate file
-        if: inputs.action == 'create_bucket'
+        if: inputs.action == 'create'
         run: |
           # Create an empty terraform state file for nagios (not the bucket creation state)
           echo '{}' > empty_nagios_state.json
@@ -136,6 +156,6 @@ jobs:
           echo "Created empty nagios/terraform.tfstate file in bucket ${{ inputs.bucket }}"
 
       - name: Terraform Destroy
-        if: inputs.action == 'destroy_bucket'
+        if: inputs.action == 'destroy'
         run: terraform destroy -auto-approve 
 
