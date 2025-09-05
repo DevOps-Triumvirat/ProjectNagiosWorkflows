@@ -139,7 +139,7 @@ jobs:
             rm -f ./check_state.json
           fi
           
-          terraform init \
+          terraform init -upgrade \
             -backend-config="bucket=${{ inputs.bucket_name }}" \
             -backend-config="key=nagios/terraform.tfstate" \
             -backend-config="region=${{ inputs.bucket_region }}"
