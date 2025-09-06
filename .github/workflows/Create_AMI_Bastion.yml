@@ -8,8 +8,8 @@ on:
         required: true
         type: choice
         options:
-          - create_AMI
-          - destroy_AMI_snapshot
+          - Create_AMI
+          - Destroy_AMI_and_snapshot
 
       aws_account:
         description: "AWS Account to use"
@@ -79,32 +79,27 @@ jobs:
           aws-region: ${{ inputs.region }}
 
       - name: Packer Init
-        if: ${{ inputs.action == 'create_AMI' }}
+        if: ${{ inputs.action == 'Create_AMI' }}
         working-directory: ProjectNagios/Packer
         run: packer init server_bastion.pkr.hcl
 
       - name: Packer Validate
-        if: ${{ inputs.action == 'create_AMI' }}
+        if: ${{ inputs.action == 'Create_AMI' }}
         working-directory: ProjectNagios/Packer
         run: packer validate server_bastion.pkr.hcl
 
       - name: Create Bastion AMI
-        if: ${{ inputs.action == 'create_AMI' }}
+        if: ${{ inputs.action == 'Create_AMI' }}
         working-directory: ProjectNagios/Packer
         run: |
-          echo "Starting Packer build for Bastion AMI..."
-          echo "Region: ${{ inputs.region }}"
-          echo "Instance Type: t3.small"
-          echo "AMI Name: Bastion-ami"
-          echo "AWS Account: ${{ inputs.aws_account }}"
-          
+        
           packer build \
             -var "region=${{ inputs.region }}" \
             -var "built_by=${{ inputs.aws_account }}" \
             server_bastion.pkr.hcl
 
       - name: Get AMI Information
-        if: ${{ inputs.action == 'create_AMI' }}
+        if: ${{ inputs.action == 'Create_AMI' }}
         working-directory: ProjectNagios/Packer
         run: |
           AMI_ID=$(aws ec2 describe-images \
@@ -126,7 +121,7 @@ jobs:
           fi
 
       - name: Destroy Bastion AMI
-        if: ${{ inputs.action == 'destroy_AMI_snapshot' }}
+        if: ${{ inputs.action == 'Destroy_AMI_and_snapshot' }}
         working-directory: ProjectNagios/Packer
         run: |
           echo "Searching for latest Bastion AMI to destroy..."
