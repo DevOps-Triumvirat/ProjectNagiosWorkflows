@@ -3,6 +3,14 @@ name: Build Bastion AMI Image
 on:
   workflow_dispatch:
     inputs:
+      action:
+        description: "Choose whether to create or destroy the Bastion AMI"
+        required: true
+        type: choice
+        options:
+          - create_AMI
+          - destroy_AMI_snapshot
+
       aws_account:
         description: "AWS Account to use"
         required: true
@@ -13,7 +21,7 @@ on:
           - emir-production
 
       region:
-        description: "AWS region to build AMI"
+        description: "AWS region for AMI image"
         required: true
         type: choice
         options:
@@ -23,8 +31,9 @@ on:
           - us-west-1
           - us-west-2
 
+
 jobs:
-  build-image:
+  bastion-image:
     runs-on: ubuntu-latest
     environment: ${{ inputs.region }}
     steps:
@@ -69,39 +78,18 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_PRODUCTION }}
           aws-region: ${{ inputs.region }}
 
-      - name: Modify Packer file with workflow inputs
-        working-directory: ProjectNagios/Packer
-        run: |
-          # Create a copy of the original file with modifications
-          cp server_bastion.pkr.hcl server_bastion_build.pkr.hcl
-          
-          # Update region in the Packer file
-          sed -i 's/region\s*=\s*"[^"]*"/region = "${{ inputs.region }}"/g' server_bastion_build.pkr.hcl
-          
-          # Update instance_type in the Packer file (hardcoded to t3.small)
-          sed -i 's/instance_type\s*=\s*"[^"]*"/instance_type = "t3.small"/g' server_bastion_build.pkr.hcl
-          
-          # Update ami_name in the Packer file (hardcoded to Bastion-ami)
-          sed -i 's/ami_name\s*=\s*"[^"]*"/ami_name = "Bastion-ami"/g' server_bastion_build.pkr.hcl
-          
-          # Update BuiltBy tag
-          sed -i 's/BuiltBy\s*=\s*"[^"]*"/BuiltBy = "${{ inputs.aws_account }}"/g' server_bastion_build.pkr.hcl
-          
-          echo "Modified Packer configuration:"
-          echo "Region: ${{ inputs.region }}"
-          echo "Instance Type: t3.small"
-          echo "AMI Name: Bastion-ami"
-          echo "Built By: ${{ inputs.aws_account }}"
-
       - name: Packer Init
+        if: ${{ inputs.action == 'create_AMI' }}
         working-directory: ProjectNagios/Packer
-        run: packer init server_bastion_build.pkr.hcl
+        run: packer init server_bastion.pkr.hcl
 
       - name: Packer Validate
+        if: ${{ inputs.action == 'create_AMI' }}
         working-directory: ProjectNagios/Packer
-        run: packer validate server_bastion_build.pkr.hcl
+        run: packer validate server_bastion.pkr.hcl
 
-      - name: Packer Build
+      - name: Create Bastion AMI
+        if: ${{ inputs.action == 'create_AMI' }}
         working-directory: ProjectNagios/Packer
         run: |
           echo "Starting Packer build for Bastion AMI..."
@@ -110,27 +98,24 @@ jobs:
           echo "AMI Name: Bastion-ami"
           echo "AWS Account: ${{ inputs.aws_account }}"
           
-          packer build server_bastion_build.pkr.hcl
+          packer build \
+            -var "region=${{ inputs.region }}" \
+            -var "built_by=${{ inputs.aws_account }}" \
+            server_bastion.pkr.hcl
 
       - name: Get AMI Information
+        if: ${{ inputs.action == 'create_AMI' }}
         working-directory: ProjectNagios/Packer
         run: |
-          echo "Packer build completed successfully!"
-          echo "AMI has been created in region: ${{ inputs.region }}"
-          echo "Built using account: ${{ inputs.aws_account }}"
-          
-          # Get the most recent AMI with our naming pattern
           AMI_ID=$(aws ec2 describe-images \
             --region ${{ inputs.region }} \
             --owners self \
             --filters "Name=name,Values=Bastion-ami*" \
             --query 'Images | sort_by(@, &CreationDate) | [-1].ImageId' \
             --output text)
-          
+
           if [ "$AMI_ID" != "None" ] && [ "$AMI_ID" != "" ]; then
             echo "Created AMI ID: $AMI_ID"
-            
-            # Get AMI details
             aws ec2 describe-images \
               --region ${{ inputs.region }} \
               --image-ids $AMI_ID \
@@ -139,3 +124,34 @@ jobs:
           else
             echo "Warning: Could not retrieve AMI information"
           fi
+
+      - name: Destroy Bastion AMI
+        if: ${{ inputs.action == 'destroy_AMI_snapshot' }}
+        working-directory: ProjectNagios/Packer
+        run: |
+          echo "Searching for latest Bastion AMI to destroy..."
+          AMI_ID=$(aws ec2 describe-images \
+            --region ${{ inputs.region }} \
+            --owners self \
+            --filters "Name=name,Values=Bastion-ami*" \
+            --query 'Images | sort_by(@, &CreationDate) | [-1].ImageId' \
+            --output text)
+
+          if [ "$AMI_ID" == "None" ] || [ -z "$AMI_ID" ]; then
+            echo "No Bastion AMI found to destroy."
+            exit 0
+          fi
+
+          echo "Deregistering AMI: $AMI_ID"
+          aws ec2 deregister-image --region ${{ inputs.region }} --image-id $AMI_ID
+
+          SNAPSHOT_IDS=$(aws ec2 describe-snapshots \
+            --region ${{ inputs.region }} \
+            --filters "Name=description,Values=*${AMI_ID}*" \
+            --query 'Snapshots[*].SnapshotId' \
+            --output text)
+
+          for SNAP_ID in $SNAPSHOT_IDS; do
+            echo "Deleting snapshot: $SNAP_ID"
+            aws ec2 delete-snapshot --region ${{ inputs.region }} --snapshot-id $SNAP_ID
+          done

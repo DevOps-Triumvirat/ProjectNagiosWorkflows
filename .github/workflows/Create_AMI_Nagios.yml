@@ -1,10 +1,10 @@
-name: Build Nagios AMI Image
+name: Build or Destroy Nagios AMI Image
 
 on:
   workflow_dispatch:
     inputs:
       region:
-        description: "AWS region to build AMI"
+        description: "AWS region to build/destroy AMI"
         required: true
         type: choice
         options:
@@ -13,6 +13,7 @@ on:
           - us-east-2
           - us-west-1
           - us-west-2
+
       aws_account:
         description: "AWS Account to use"
         required: true
@@ -21,9 +22,17 @@ on:
           - alexander-test
           - eliza-dev
           - emir-production
+
+      action:
+        description: "Choose whether to create or destroy the Nagios AMI"
+        required: true
+        type: choice
+        options:
+          - create
+          - destroy
           
 jobs:
-  build-image:
+  nagios-image:
     runs-on: ubuntu-latest
     environment: ${{ inputs.region }}
     steps:
@@ -69,27 +78,30 @@ jobs:
           aws-region: ${{ inputs.region }}
 
       - name: Packer Init
+        if: ${{ inputs.action == 'create' }}
         working-directory: ProjectNagios/Packer
         run: packer init server_nagios.pkr.hcl
 
       - name: Packer Validate
+        if: ${{ inputs.action == 'create' }}
         working-directory: ProjectNagios/Packer
         run: packer validate server_nagios.pkr.hcl
 
-      - name: Packer Build
+      - name: Create Nagios AMI
+        if: ${{ inputs.action == 'create' }}
         working-directory: ProjectNagios/Packer
         run: |
           echo "Starting Packer build for Nagios AMI..."
           
           packer build \
             -var "region=${{ inputs.region }}" \
+            -var "built_by=${{ inputs.aws_account }}" \
             server_nagios.pkr.hcl
 
-      - name: Get AMI Information to AWS
+      - name: Get AMI Information
+        if: ${{ inputs.action == 'create' }}
         working-directory: ProjectNagios/Packer
         run: |
-          echo "Packer build completed successfully!"
-          
           AMI_ID=$(aws ec2 describe-images \
             --region ${{ inputs.region }} \
             --owners self \
@@ -107,3 +119,34 @@ jobs:
           else
             echo "Warning: Could not retrieve AMI information"
           fi
+
+      - name: Destroy Nagios AMI
+        if: ${{ inputs.action == 'destroy' }}
+        working-directory: ProjectNagios/Packer
+        run: |
+          echo "Searching for latest Nagios AMI to destroy..."
+          AMI_ID=$(aws ec2 describe-images \
+            --region ${{ inputs.region }} \
+            --owners self \
+            --filters "Name=name,Values=Nagios-ami*" \
+            --query 'Images | sort_by(@, &CreationDate) | [-1].ImageId' \
+            --output text)
+
+          if [ "$AMI_ID" == "None" ] || [ -z "$AMI_ID" ]; then
+            echo "No Nagios AMI found to destroy."
+            exit 0
+          fi
+
+          echo "Deregistering AMI: $AMI_ID"
+          aws ec2 deregister-image --region ${{ inputs.region }} --image-id $AMI_ID
+
+          SNAPSHOT_IDS=$(aws ec2 describe-snapshots \
+            --region ${{ inputs.region }} \
+            --filters "Name=description,Values=*${AMI_ID}*" \
+            --query 'Snapshots[*].SnapshotId' \
+            --output text)
+
+          for SNAP_ID in $SNAPSHOT_IDS; do
+            echo "Deleting snapshot: $SNAP_ID"
+            aws ec2 delete-snapshot --region ${{ inputs.region }} --snapshot-id $SNAP_ID
+          done
