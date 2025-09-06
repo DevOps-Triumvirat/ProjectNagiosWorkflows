@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       action:
-        description: "Choose whether to create or destroy the Bastion AMI"
+        description: "Create Nagios AMI image"
         required: true
         type: choice
         options:
