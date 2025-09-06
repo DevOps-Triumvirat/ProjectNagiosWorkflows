@@ -8,7 +8,7 @@ on:
         required: true
         type: choice
         options:
-          - Create_AMI
+          - Create_Bastion_AMI
           - Destroy_AMI_and_snapshot
 
       aws_account:
@@ -79,17 +79,17 @@ jobs:
           aws-region: ${{ inputs.region }}
 
       - name: Packer Init
-        if: ${{ inputs.action == 'Create_AMI' }}
+        if: ${{ inputs.action == 'Create_Bastion_AMI' }}
         working-directory: ProjectNagios/Packer
         run: packer init server_bastion.pkr.hcl
 
       - name: Packer Validate
-        if: ${{ inputs.action == 'Create_AMI' }}
+        if: ${{ inputs.action == 'Create_Bastion_AMI' }}
         working-directory: ProjectNagios/Packer
         run: packer validate server_bastion.pkr.hcl
 
       - name: Create Bastion AMI
-        if: ${{ inputs.action == 'Create_AMI' }}
+        if: ${{ inputs.action == 'Create_Bastion_AMI' }}
         working-directory: ProjectNagios/Packer
         run: |
         
@@ -98,7 +98,7 @@ jobs:
             server_bastion.pkr.hcl
 
       - name: Get AMI Information
-        if: ${{ inputs.action == 'Create_AMI' }}
+        if: ${{ inputs.action == 'Create_Bastion_AMI' }}
         working-directory: ProjectNagios/Packer
         run: |
           AMI_ID=$(aws ec2 describe-images \
