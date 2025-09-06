@@ -140,7 +140,7 @@ jobs:
         run: |
           terraform init \
             -backend-config="bucket=${{ inputs.bucket_name }}" \
-            -backend-config="key=bastion/terraform.tfstate" \
+            -backend-config="key=nagios/terraform.tfstate" \
             -backend-config="region=${{ inputs.bucket_region }}"
 
       - name: Terraform Plan
