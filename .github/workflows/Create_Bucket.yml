@@ -12,7 +12,7 @@ on:
           - Destroy_s3_Bucket
         default: "Create_s3_Bucket"
       bucket:
-        description: "S3 bucket name"
+        description: "S3 bucket name - must be unique"
         required: true
         type: string
       aws_account:
