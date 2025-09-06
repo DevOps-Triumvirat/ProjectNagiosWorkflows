@@ -1,8 +1,15 @@
-name: Build or Destroy Nagios AMI Image
+name: Build Nagios AMI Image
 
 on:
   workflow_dispatch:
     inputs:
+      action:
+        description: "Choose whether to create or destroy the Nagios AMI"
+        required: true
+        type: choice
+        options:
+          - Create_AMI
+          - Destroy_AMI_and_snapshot
       region:
         description: "AWS region to build/destroy AMI"
         required: true
@@ -23,13 +30,6 @@ on:
           - eliza-dev
           - emir-production
 
-      action:
-        description: "Choose whether to create or destroy the Nagios AMI"
-        required: true
-        type: choice
-        options:
-          - create
-          - destroy
           
 jobs:
   nagios-image:
@@ -78,17 +78,17 @@ jobs:
           aws-region: ${{ inputs.region }}
 
       - name: Packer Init
-        if: ${{ inputs.action == 'create' }}
+        if: ${{ inputs.action == 'Create_AMI' }}
         working-directory: ProjectNagios/Packer
         run: packer init server_nagios.pkr.hcl
 
       - name: Packer Validate
-        if: ${{ inputs.action == 'create' }}
+        if: ${{ inputs.action == 'Create_AMI' }}
         working-directory: ProjectNagios/Packer
         run: packer validate server_nagios.pkr.hcl
 
       - name: Create Nagios AMI
-        if: ${{ inputs.action == 'create' }}
+        if: ${{ inputs.action == 'Create_AMI' }}
         working-directory: ProjectNagios/Packer
         run: |
           echo "Starting Packer build for Nagios AMI..."
@@ -99,7 +99,7 @@ jobs:
             server_nagios.pkr.hcl
 
       - name: Get AMI Information
-        if: ${{ inputs.action == 'create' }}
+        if: ${{ inputs.action == 'Create_AMI' }}
         working-directory: ProjectNagios/Packer
         run: |
           AMI_ID=$(aws ec2 describe-images \
@@ -121,7 +121,7 @@ jobs:
           fi
 
       - name: Destroy Nagios AMI
-        if: ${{ inputs.action == 'destroy' }}
+        if: ${{ inputs.action == 'Destroy_AMI_and_snapshot' }}
         working-directory: ProjectNagios/Packer
         run: |
           echo "Searching for latest Nagios AMI to destroy..."
