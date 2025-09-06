@@ -95,7 +95,6 @@ jobs:
           
           packer build \
             -var "region=${{ inputs.region }}" \
-            -var "built_by=${{ inputs.aws_account }}" \
             server_nagios.pkr.hcl
 
       - name: Get AMI Information
