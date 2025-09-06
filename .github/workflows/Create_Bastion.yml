@@ -37,6 +37,18 @@ on:
           - us-west-2
           - ca-central-1
 
+      instance_type:
+        description: "Instance type for bastion host"
+        required: true
+        type: choice
+        options:
+          - t2.micro
+          - t3.micro
+          - t2.nano
+          - t2.small
+          - t2.medium
+        default: "t2.micro"
+      
       bastion_instance_region:
         description: "Bastion instance region"
         required: true
@@ -47,18 +59,6 @@ on:
           - us-west-1
           - us-west-2
           - ca-central-1
-
-      instance_type:
-        description: "EC2 instance type for bastion host"
-        required: true
-        type: choice
-        options:
-          - t2.micro
-          - t3.micro
-          - t2.nano
-          - t2.small
-          - t2.medium
-        default: "t2.micro"
 
   workflow_call:
     inputs:

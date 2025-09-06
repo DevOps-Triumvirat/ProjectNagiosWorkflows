@@ -59,7 +59,8 @@ on:
 
 jobs:
   destroy-nagios-infrastructure:
-    uses: ./.github/workflows/Infra_remote.yml
+    uses: ./ProjectNagiosWorkflows/.github/workflows/Create_Nagios_infra.yml
+    working-directory: ProjectNagios/Terraform/Nagios
     with:
       action: "destroy"
       region: ${{ inputs.region }}
@@ -71,7 +72,8 @@ jobs:
 
   destroy-bastion-infrastructure:
     needs: destroy-nagios-infrastructure
-    uses: ./.github/workflows/Bastion_remote.yml
+    uses: ./ProjectNagiosWorkflows/.github/workflows/Create_Bastion.yml
+    working-directory: ProjectNagios/Terraform/Bastion
     with:
       action: "destroy"
       aws_account: ${{ inputs.aws_account }}
