@@ -68,10 +68,19 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: ${{ inputs.bastion_region }}
+    environment: ${{ inputs.bastion_instance_region }}
     steps:
-      - name: Checkout Repository
+      - name: Checkout Current Repository (ProjectNagiosWorkflows)
         uses: actions/checkout@v4
+        with:
+          path: ProjectNagiosWorkflows
+
+      - name: Checkout Private Repository (ProjectNagios)
+        uses: actions/checkout@v4
+        with:
+          repository: "DevOps-Triumvirat/ProjectNagios"
+          token: ${{ secrets.PRIVATE_REPO_TOKEN }}
+          path: ProjectNagios
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -103,7 +112,7 @@ jobs:
           aws-region: ${{ inputs.bastion_region }}
 
       - name: Terraform Init
-        working-directory: Terraform/BastionSimple
+        working-directory: ProjectNagios/Terraform/BastionSimple
         run: |
           terraform init \
             -backend-config="bucket=${{ inputs.bucket_name }}" \
@@ -111,7 +120,7 @@ jobs:
             -backend-config="region=${{ inputs.bucket_region }}"
 
       - name: Terraform Plan
-        working-directory: Terraform/BastionSimple
+        working-directory: ProjectNagios/Terraform/BastionSimple
         run: |
           terraform plan \
             -var="region=${{ inputs.bastion_region }}" \
@@ -120,7 +129,7 @@ jobs:
 
       - name: Terraform Apply
         if: inputs.action == 'apply'
-        working-directory: Terraform/BastionSimple
+        working-directory: ProjectNagios/Terraform/BastionSimple
         run: |
           terraform apply -auto-approve \
             -var="region=${{ inputs.bastion_region }}" \
@@ -129,7 +138,7 @@ jobs:
 
       - name: Terraform Destroy
         if: inputs.action == 'destroy'
-        working-directory: Terraform/BastionSimple
+        working-directory: ProjectNagios/Terraform/BastionSimple
         run: |
           terraform destroy -auto-approve \
             -var="region=${{ inputs.bastion_region }}" \
@@ -138,7 +147,7 @@ jobs:
 
       - name: Show Bastion Information
         if: inputs.action == 'apply'
-        working-directory: Terraform/BastionSimple
+        working-directory: ProjectNagios/Terraform/BastionSimple
         run: |
           echo "=== Bastion Instance Information ==="
           echo "Instance ID: $(terraform output -raw bastion_instance_id)"
