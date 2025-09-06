@@ -4,22 +4,12 @@ on:
   workflow_dispatch:
     inputs:
       action:
-        description: "Choose whether to create or destroy the Nagios AMI"
+        description: "Choose whether to create or destroy the Bastion AMI"
         required: true
         type: choice
         options:
           - Create_AMI
           - Destroy_AMI_and_snapshot
-      region:
-        description: "AWS region to build/destroy AMI"
-        required: true
-        type: choice
-        options:
-          - ca-central-1
-          - us-east-1
-          - us-east-2
-          - us-west-1
-          - us-west-2
 
       aws_account:
         description: "AWS Account to use"
@@ -30,6 +20,16 @@ on:
           - eliza-dev
           - emir-production
 
+      region:
+        description: "AWS region for AMI image"
+        required: true
+        type: choice
+        options:
+          - ca-central-1
+          - us-east-1
+          - us-east-2
+          - us-west-1
+          - us-west-2
           
 jobs:
   nagios-image:

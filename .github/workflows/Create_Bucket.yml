@@ -8,9 +8,9 @@ on:
         required: true
         type: choice
         options:
-          - create_bucket
-          - destroy_bucket
-        default: "create"
+          - Create_s3_Bucket
+          - Destroy_s3_Bucket
+        default: "Create_s3_Bucket"
       bucket:
         description: "S3 bucket name"
         required: true
@@ -137,7 +137,7 @@ jobs:
         run: terraform init
 
       - name: Empty S3 bucket before destruction
-        if: inputs.action == 'destroy_bucket'
+        if: inputs.action == 'Destroy_s3_Bucket'
         run: |
           # Remove all objects and versions from the bucket
           aws s3 rm s3://${{ inputs.bucket }} --recursive
@@ -157,18 +157,18 @@ jobs:
           done
 
       - name: Import existing resources 
-        if: inputs.action == 'destroy_bucket'
+        if: inputs.action == 'Destroy_s3_Bucket'
         run: |
           terraform import aws_s3_bucket.tf_state "${{ inputs.bucket }}" 
           terraform import aws_s3_bucket_versioning.tf_state "${{ inputs.bucket }}" 
           terraform import aws_s3_bucket_server_side_encryption_configuration.tf_state "${{ inputs.bucket }}" 
 
       - name: Terraform Apply
-        if: inputs.action == 'create_bucket'
+        if: inputs.action == 'Create_s3_Bucket'
         run: terraform apply -auto-approve
 
       - name: Create empty nagios/terraform.tfstate file
-        if: inputs.action == 'create_bucket'
+        if: inputs.action == 'Create_s3_Bucket'
         run: |
           # Create an empty terraform state file for nagios (not the bucket creation state)
           echo '{}' > empty_nagios_state.json
@@ -177,7 +177,7 @@ jobs:
           aws s3 cp empty_nagios_state.json s3://${{ inputs.bucket }}/nagios/terraform.tfstate
           echo "Created empty nagios/terraform.tfstate file in bucket ${{ inputs.bucket }}"
 
-      - name: Terraform destroy_bucket
-        if: inputs.action == 'destroy_bucket'
+      - name: Terraform Destroy_s3_Bucket
+        if: inputs.action == 'Destroy_s3_Bucket'
         run: terraform destroy -auto-approve 
 
