@@ -11,13 +11,15 @@ on:
           - apply
           - destroy
       region:
-        description: "AWS region"
+        description: "AWS region for Nagios infra"
         required: true
         type: choice
         options:
           - us-east-1
+          - us-east-2
+          - us-west-1
           - us-west-2
-          - eu-west-1
+          - ca-central-1
       aws_account:
         description: "AWS account to use"
         required: true
@@ -36,17 +38,20 @@ on:
         type: choice
         options:
           - us-east-1
+          - us-east-2
+          - us-west-1
           - us-west-2
-          - eu-west-1
+          - ca-central-1
       bastion_instance_region:
         description: "Region where the bastion instance is deployed"
         required: true
         type: choice
         options:
           - us-east-1
+          - us-east-2
+          - us-west-1
           - us-west-2
-          - eu-west-1
-        default: "ca-central-1"
+          - ca-central-1
 
   workflow_call:
     inputs:
