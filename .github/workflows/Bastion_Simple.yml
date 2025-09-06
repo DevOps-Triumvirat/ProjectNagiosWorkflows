@@ -124,8 +124,7 @@ jobs:
         run: |
           terraform plan \
             -var="region=${{ inputs.bastion_region }}" \
-            -var="instance_type=${{ inputs.instance_type }}" \
-            -var="key_name=${{ inputs.key_name }}"
+            -var="instance_type=${{ inputs.instance_type }}"
 
       - name: Terraform Apply
         if: inputs.action == 'apply'
@@ -133,8 +132,7 @@ jobs:
         run: |
           terraform apply -auto-approve \
             -var="region=${{ inputs.bastion_region }}" \
-            -var="instance_type=${{ inputs.instance_type }}" \
-            -var="key_name=${{ inputs.key_name }}"
+            -var="instance_type=${{ inputs.instance_type }}"
 
       - name: Terraform Destroy
         if: inputs.action == 'destroy'
@@ -142,17 +140,5 @@ jobs:
         run: |
           terraform destroy -auto-approve \
             -var="region=${{ inputs.bastion_region }}" \
-            -var="instance_type=${{ inputs.instance_type }}" \
-            -var="key_name=${{ inputs.key_name }}"
+            -var="instance_type=${{ inputs.instance_type }}"
 
-      - name: Show Bastion Information
-        if: inputs.action == 'apply'
-        working-directory: ProjectNagios/Terraform/BastionSimple
-        run: |
-          echo "=== Bastion Instance Information ==="
-          echo "Instance ID: $(terraform output -raw bastion_instance_id)"
-          echo "Public IP: $(terraform output -raw bastion_public_ip)"
-          echo "Private IP: $(terraform output -raw bastion_private_ip)"
-          echo "SSH Key Name: $(terraform output -raw ssh_key_name)"
-          echo "SSH Command: $(terraform output -raw ssh_command)"
-          echo "Private Key SSM Parameter: $(terraform output -raw private_key_ssm_parameter)"
