@@ -20,14 +20,6 @@ on:
           - us-west-1
           - us-west-2
           - ca-central-1
-      aws_account:
-        description: "AWS account to use"
-        required: true
-        type: choice
-        options:
-          - alexander-test
-          - eliza-dev
-          - emir-production
       bucket_name:
         description: "S3 bucket name for Terraform state"
         required: true
@@ -42,6 +34,14 @@ on:
           - us-west-1
           - us-west-2
           - ca-central-1
+      aws_account:
+        description: "AWS account to use"
+        required: true
+        type: choice
+        options:
+          - alexander-test
+          - eliza-dev
+          - emir-production
       bastion_instance_region:
         description: "Region where the bastion instance is deployed"
         required: true
