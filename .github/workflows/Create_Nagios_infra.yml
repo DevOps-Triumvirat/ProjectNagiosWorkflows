@@ -139,10 +139,6 @@ jobs:
           sed -i "s/^bastion_instance_region = .*/bastion_instance_region = \"${{ inputs.bastion_instance_region }}\"/" terraform.tfvars
           sed -i "s/^bastion_state_region = .*/bastion_state_region = \"${{ inputs.bucket_region }}\"/" terraform.tfvars
           
-          # Debug: Show final terraform.tfvars content
-          echo "=== Generated terraform.tfvars content ==="
-          cat terraform.tfvars
-          echo "=========================================="
 
       - name: Terraform Init
         working-directory: ProjectNagios/Terraform/Nagios
@@ -161,10 +157,6 @@ jobs:
             -backend-config="bucket=${{ inputs.bucket_name }}" \
             -backend-config="key=nagios/${{ inputs.region }}/terraform.tfstate" \
             -backend-config="region=${{ inputs.bucket_region }}"
-
-      - name: Terraform Plan
-        working-directory: ProjectNagios/Terraform/Nagios
-        run: terraform plan -var-file="terraform.tfvars"
 
       - name: Terraform Apply
         if: inputs.action == 'apply'
