@@ -1,4 +1,4 @@
-name: Create or Destroy All Infrastructure
+name: Destroy/Create All Infrastructure
 
 on:
   workflow_dispatch:
