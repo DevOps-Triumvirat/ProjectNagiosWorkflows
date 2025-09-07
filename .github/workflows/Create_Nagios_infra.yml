@@ -148,18 +148,18 @@ jobs:
         working-directory: ProjectNagios/Terraform/Nagios
         run: |
           # Check if state file exists and is corrupted, remove it if needed
-          aws s3 cp s3://${{ inputs.bucket_name }}/nagios/terraform.tfstate ./check_state.json || echo "No existing state file"
+          aws s3 cp s3://${{ inputs.bucket_name }}/nagios/${{ inputs.region }}/terraform.tfstate ./check_state.json || echo "No existing state file"
           if [ -f "./check_state.json" ]; then
             if ! grep -q '"version"' ./check_state.json; then
               echo "Corrupted state file detected, removing it..."
-              aws s3 rm s3://${{ inputs.bucket_name }}/nagios/terraform.tfstate
+              aws s3 rm s3://${{ inputs.bucket_name }}/nagios/${{ inputs.region }}/terraform.tfstate
             fi
             rm -f ./check_state.json
           fi
           
           terraform init -upgrade \
             -backend-config="bucket=${{ inputs.bucket_name }}" \
-            -backend-config="key=nagios/terraform.tfstate" \
+            -backend-config="key=nagios/${{ inputs.region }}/terraform.tfstate" \
             -backend-config="region=${{ inputs.bucket_region }}"
 
       - name: Terraform Plan
@@ -175,3 +175,5 @@ jobs:
         if: inputs.action == 'destroy'
         working-directory: ProjectNagios/Terraform/Nagios
         run: terraform destroy -auto-approve -var-file="terraform.tfvars"
+
+
