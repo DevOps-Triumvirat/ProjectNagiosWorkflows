@@ -57,6 +57,9 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      AWS_DEFAULT_REGION: ${{ inputs.region }}
+      AWS_REGION: ${{ inputs.region }}
 
     steps:
       - name: Checkout Repository
@@ -93,6 +96,7 @@ jobs:
 
       - name: Write Terraform config for S3 bucket creation
         run: |
+          echo "Creating Terraform config for region: ${{ inputs.region }}"
           cat > bucket-main.tf <<EOF
           terraform {
             required_providers {
@@ -132,6 +136,14 @@ jobs:
           }
 
           EOF
+
+      - name: Verify AWS Configuration
+        run: |
+          echo "AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION"
+          echo "AWS_REGION: $AWS_REGION"
+          echo "Input region: ${{ inputs.region }}"
+          aws configure list
+          aws sts get-caller-identity
 
       - name: Terraform Init
         run: terraform init
