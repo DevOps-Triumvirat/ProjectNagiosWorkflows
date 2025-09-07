@@ -147,6 +147,12 @@ jobs:
           echo "bastion_state_bucket = \"${{ inputs.bucket_name }}\"" >> terraform.tfvars
           echo "bastion_state_region = \"${{ inputs.bucket_region }}\"" >> terraform.tfvars
           
+          # Add AMI configuration variables
+          echo "" >> terraform.tfvars
+          echo "# AMI configuration" >> terraform.tfvars
+          echo "custom_ami = true" >> terraform.tfvars
+          echo "custom_ami_name = \"Nagios-ami\"" >> terraform.tfvars
+          
           # Debug: Show final terraform.tfvars content
           echo "=== Generated terraform.tfvars content ==="
           cat terraform.tfvars
