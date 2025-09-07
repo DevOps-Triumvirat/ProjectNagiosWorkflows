@@ -127,7 +127,7 @@ jobs:
           }
 
           provider "aws" {
-            region = "us-east-1"
+            region = "${{ inputs.region }}"
           }
 
           # Create S3 bucket for tfstate with object lock enabled
