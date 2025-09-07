@@ -1,8 +1,16 @@
-name: Destroy 
+name: Create or Destroy All Infrastructure
 
 on:
   workflow_dispatch:
     inputs:
+      action:
+        description: "Action to perform"
+        required: true
+        type: choice
+        options:
+          - create
+          - destroy
+        default: "destroy"
       aws_account:
         description: "AWS Account to use"
         required: true
@@ -58,9 +66,47 @@ on:
         default: "t2.micro"
 
 jobs:
+  # CREATE WORKFLOWS (run in order: S3 bucket -> Bastion -> Nagios)
+  create-s3-bucket:
+    if: inputs.action == 'create'
+    uses: ./.github/workflows/Create_Bucket.yml
+    with:
+      action: "Create_s3_Bucket"
+      bucket: ${{ inputs.bucket_name }}
+      aws_account: ${{ inputs.aws_account }}
+      region: ${{ inputs.bucket_region }}
+    secrets: inherit
+
+  create-bastion-infrastructure:
+    if: inputs.action == 'create'
+    needs: create-s3-bucket
+    uses: ./.github/workflows/Create_Bastion.yml
+    with:
+      action: "apply"
+      aws_account: ${{ inputs.aws_account }}
+      bucket_name: ${{ inputs.bucket_name }}
+      bucket_region: ${{ inputs.bucket_region }}
+      bastion_instance_region: ${{ inputs.bastion_instance_region }}
+      instance_type: ${{ inputs.instance_type }}
+    secrets: inherit
+
+  create-nagios-infrastructure:
+    if: inputs.action == 'create'
+    needs: create-bastion-infrastructure
+    uses: ./.github/workflows/Create_Nagios_infra.yml
+    with:
+      action: "apply"
+      region: ${{ inputs.region }}
+      aws_account: ${{ inputs.aws_account }}
+      bucket_name: ${{ inputs.bucket_name }}
+      bucket_region: ${{ inputs.bucket_region }}
+      bastion_instance_region: ${{ inputs.bastion_instance_region }}
+    secrets: inherit
+
+  # DESTROY WORKFLOWS (run in reverse order: Nagios -> Bastion -> S3 bucket)
   destroy-nagios-infrastructure:
-    uses: ./ProjectNagiosWorkflows/.github/workflows/Create_Nagios_infra.yml
-    working-directory: ProjectNagios/Terraform/Nagios
+    if: inputs.action == 'destroy'
+    uses: ./.github/workflows/Create_Nagios_infra.yml
     with:
       action: "destroy"
       region: ${{ inputs.region }}
@@ -71,9 +117,9 @@ jobs:
     secrets: inherit
 
   destroy-bastion-infrastructure:
+    if: inputs.action == 'destroy'
     needs: destroy-nagios-infrastructure
-    uses: ./ProjectNagiosWorkflows/.github/workflows/Create_Bastion.yml
-    working-directory: ProjectNagios/Terraform/Bastion
+    uses: ./.github/workflows/Create_Bastion.yml
     with:
       action: "destroy"
       aws_account: ${{ inputs.aws_account }}
@@ -84,10 +130,11 @@ jobs:
     secrets: inherit
 
   destroy-s3-bucket:
+    if: inputs.action == 'destroy'
     needs: destroy-bastion-infrastructure
-    uses: ./.github/workflows/Bucket.yml
+    uses: ./.github/workflows/Create_Bucket.yml
     with:
-      action: "destroy"
+      action: "Destroy_s3_Bucket"
       bucket: ${{ inputs.bucket_name }}
       aws_account: ${{ inputs.aws_account }}
       region: ${{ inputs.bucket_region }}
