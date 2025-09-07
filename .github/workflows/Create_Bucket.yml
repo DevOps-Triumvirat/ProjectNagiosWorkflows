@@ -127,7 +127,7 @@ jobs:
           }
 
           provider "aws" {
-            region = "${{ inputs.region }}"
+            region = "us-east-1"
           }
 
           # Create S3 bucket for tfstate with object lock enabled
@@ -225,4 +225,3 @@ jobs:
         run: terraform destroy -auto-approve 
 
 
-        
