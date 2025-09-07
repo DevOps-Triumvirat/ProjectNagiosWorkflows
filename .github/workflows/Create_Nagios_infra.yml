@@ -127,31 +127,17 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_PRODUCTION }}
           aws-region: ${{ inputs.region }}
 
-      - name: Create terraform.tfvars from environment secret and inputs
+      - name: Create terraform.tfvars from environment secret
         working-directory: ProjectNagios/Terraform/Nagios
         run: |
-          # Create base terraform.tfvars from secrets
+          # Load terraform.tfvars from environment-specific secret
           echo "${{ secrets.TERRAFORM_TFVARS }}" > terraform.tfvars
           
-          # Remove any existing bastion variables to avoid duplicates
-          sed -i '/^bastion_instance_region/d' terraform.tfvars
-          sed -i '/^bastion_instance_key/d' terraform.tfvars
-          sed -i '/^bastion_state_bucket/d' terraform.tfvars
-          sed -i '/^bastion_state_region/d' terraform.tfvars
-          
-          # Add bastion configuration variables
-          echo "" >> terraform.tfvars
-          echo "# Bastion instance configuration from workflow inputs" >> terraform.tfvars
-          echo "bastion_instance_region = \"${{ inputs.bastion_instance_region }}\"" >> terraform.tfvars
-          echo "bastion_instance_key = \"generated-bastion-key\"" >> terraform.tfvars
-          echo "bastion_state_bucket = \"${{ inputs.bucket_name }}\"" >> terraform.tfvars
-          echo "bastion_state_region = \"${{ inputs.bucket_region }}\"" >> terraform.tfvars
-          
-          # Add AMI configuration variables
-          echo "" >> terraform.tfvars
-          echo "# AMI configuration" >> terraform.tfvars
-          echo "custom_ami = true" >> terraform.tfvars
-          echo "custom_ami_name = \"Nagios-ami\"" >> terraform.tfvars
+          # Override ALL user-selectable workflow inputs
+          sed -i "s/^region = .*/region = \"${{ inputs.region }}\"/" terraform.tfvars
+          sed -i "s/^shared_state_bucket = .*/shared_state_bucket = \"${{ inputs.bucket_name }}\"/" terraform.tfvars
+          sed -i "s/^bastion_instance_region = .*/bastion_instance_region = \"${{ inputs.bastion_instance_region }}\"/" terraform.tfvars
+          sed -i "s/^bastion_state_region = .*/bastion_state_region = \"${{ inputs.bucket_region }}\"/" terraform.tfvars
           
           # Debug: Show final terraform.tfvars content
           echo "=== Generated terraform.tfvars content ==="
