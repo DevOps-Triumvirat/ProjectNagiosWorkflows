@@ -1,0 +1,94 @@
+name: Destroy ALL Nagios infra
+
+on:
+  workflow_dispatch:
+    inputs:
+      aws_account:
+        description: "AWS Account to use"
+        required: true
+        type: choice
+        options:
+          - alexander-test
+          - eliza-dev
+          - emir-production
+      region:
+        description: "AWS region for Nagios infrastructure"
+        required: true
+        type: choice
+        options:
+          - us-east-1
+          - us-east-2
+          - us-west-1
+          - us-west-2
+          - ca-central-1
+      bastion_instance_region:
+        description: "Region where the bastion instance is deployed"
+        required: true
+        type: choice
+        options:
+          - us-east-1
+          - us-east-2
+          - us-west-1
+          - us-west-2
+          - ca-central-1
+      bucket_name:
+        description: "S3 bucket name for Terraform state"
+        required: true
+        type: string
+      bucket_region:
+        description: "S3 bucket region"
+        required: true
+        type: choice
+        options:
+          - us-east-1
+          - us-east-2
+          - us-west-1
+          - us-west-2
+          - ca-central-1
+      instance_type:
+        description: "Ubuntu instance type for bastion host"
+        required: true
+        type: choice
+        options:
+          - t2.micro
+          - t3.micro
+          - t2.nano
+          - t2.small
+          - t2.medium
+        default: "t2.micro"
+
+jobs:
+  destroy-nagios-infrastructure:
+    uses: ./ProjectNagiosWorkflows/.github/workflows/Create_Nagios_infra.yml
+    working-directory: ProjectNagios/Terraform/Nagios
+    with:
+      action: "destroy"
+      region: ${{ inputs.region }}
+      aws_account: ${{ inputs.aws_account }}
+      bucket_name: ${{ inputs.bucket_name }}
+      bucket_region: ${{ inputs.bucket_region }}
+      bastion_instance_region: ${{ inputs.bastion_instance_region }}
+    secrets: inherit
+
+  destroy-bastion-infrastructure:
+    needs: destroy-nagios-infrastructure
+    uses: ./ProjectNagiosWorkflows/.github/workflows/Create_Bastion.yml
+    working-directory: ProjectNagios/Terraform/Bastion
+    with:
+      action: "destroy"
+      aws_account: ${{ inputs.aws_account }}
+      bucket_name: ${{ inputs.bucket_name }}
+      bucket_region: ${{ inputs.bucket_region }}
+      bastion_instance_region: ${{ inputs.bastion_instance_region }}
+      instance_type: ${{ inputs.instance_type }}
+    secrets: inherit
+
+  destroy-s3-bucket:
+    needs: destroy-bastion-infrastructure
+    uses: ./.github/workflows/Bucket.yml
+    with:
+      action: "destroy"
+      bucket: ${{ inputs.bucket_name }}
+      aws_account: ${{ inputs.aws_account }}
+      region: ${{ inputs.bucket_region }}
+    secrets: inherit
