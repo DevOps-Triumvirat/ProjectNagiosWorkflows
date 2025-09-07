@@ -72,27 +72,42 @@ jobs:
 
       - name: Configure AWS Credentials for Test Account
         if: inputs.aws_account == 'Test'
-        uses: aws-actions/configure-aws-credentials@v4.3.1
+        uses: aws-actions/configure-aws-credentials@v4.0.2
         with:
           aws-access-key-id: "${{ secrets.AWS_ACCESS_KEY_ID_TEST }}"
           aws-secret-access-key: "${{ secrets.AWS_SECRET_ACCESS_KEY_TEST }}"
           aws-region: ${{ inputs.region }}
+          mask-aws-account-id: false
 
       - name: Configure AWS Credentials for Production Account
         if: inputs.aws_account == 'Production'
-        uses: aws-actions/configure-aws-credentials@v4.3.1
+        uses: aws-actions/configure-aws-credentials@v4.0.2
         with:
           aws-access-key-id: "${{ secrets.AWS_ACCESS_KEY_ID_PRODUCTION }}"
           aws-secret-access-key: "${{ secrets.AWS_SECRET_ACCESS_KEY_PRODUCTION }}"
           aws-region: ${{ inputs.region }}
+          mask-aws-account-id: false
 
       - name: Configure AWS Credentials for Dev Account
         if: inputs.aws_account == 'Development'
-        uses: aws-actions/configure-aws-credentials@v4.3.1
+        uses: aws-actions/configure-aws-credentials@v4.0.2
         with:
           aws-access-key-id: "${{ secrets.AWS_ACCESS_KEY_ID_DEV }}"
           aws-secret-access-key: "${{ secrets.AWS_SECRET_ACCESS_KEY_DEV }}"
           aws-region: ${{ inputs.region }}
+          mask-aws-account-id: false
+
+      - name: Force Region Configuration Override
+        run: |
+          echo "Forcing region configuration to: ${{ inputs.region }}"
+          aws configure set region ${{ inputs.region }}
+          aws configure set default.region ${{ inputs.region }}
+          export AWS_DEFAULT_REGION="${{ inputs.region }}"
+          export AWS_REGION="${{ inputs.region }}"
+          echo "Current AWS configuration:"
+          aws configure list
+          echo "Testing region with STS call:"
+          aws sts get-caller-identity --region ${{ inputs.region }}
 
       - name: Write Terraform config for S3 bucket creation
         env:
