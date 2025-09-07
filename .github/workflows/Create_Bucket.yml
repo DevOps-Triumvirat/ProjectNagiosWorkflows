@@ -95,8 +95,12 @@ jobs:
           aws-region: ${{ inputs.region }}
 
       - name: Write Terraform config for S3 bucket creation
+        env:
+          TF_VAR_region: ${{ inputs.region }}
         run: |
           echo "Creating Terraform config for region: ${{ inputs.region }}"
+          export AWS_DEFAULT_REGION="${{ inputs.region }}"
+          export AWS_REGION="${{ inputs.region }}"
           cat > bucket-main.tf <<EOF
           terraform {
             required_providers {
@@ -146,7 +150,13 @@ jobs:
           aws sts get-caller-identity
 
       - name: Terraform Init
-        run: terraform init
+        env:
+          AWS_DEFAULT_REGION: ${{ inputs.region }}
+          AWS_REGION: ${{ inputs.region }}
+        run: |
+          export AWS_DEFAULT_REGION="${{ inputs.region }}"
+          export AWS_REGION="${{ inputs.region }}"
+          terraform init
 
       - name: Empty S3 bucket before destruction
         if: inputs.action == 'Destroy_s3_Bucket'
@@ -177,7 +187,13 @@ jobs:
 
       - name: Terraform Apply
         if: inputs.action == 'Create_s3_Bucket'
-        run: terraform apply -auto-approve
+        env:
+          AWS_DEFAULT_REGION: ${{ inputs.region }}
+          AWS_REGION: ${{ inputs.region }}
+        run: |
+          export AWS_DEFAULT_REGION="${{ inputs.region }}"
+          export AWS_REGION="${{ inputs.region }}"
+          terraform apply -auto-approve
 
       - name: Create empty nagios/terraform.tfstate file
         if: inputs.action == 'Create_s3_Bucket'
