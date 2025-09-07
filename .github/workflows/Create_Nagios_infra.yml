@@ -39,9 +39,9 @@ on:
         required: true
         type: choice
         options:
-          - alexander-test
-          - eliza-dev
-          - emir-production
+          - Test
+          - Development
+          - Production
       bastion_instance_region:
         description: "Region where the bastion instance is deployed"
         required: true
@@ -104,7 +104,7 @@ jobs:
           terraform_version: "1.12.2"
 
       - name: Configure AWS Credentials for Dev Account
-        if: inputs.aws_account == 'eliza-dev'
+        if: inputs.aws_account == 'Development'
         uses: aws-actions/configure-aws-credentials@v4.3.1
         with:
           aws-access-key-id: "${{ secrets.AWS_ACCESS_KEY_ID_DEV }}"
@@ -112,7 +112,7 @@ jobs:
           aws-region: ${{ inputs.region }}
 
       - name: Configure AWS Credentials for Alexander Test
-        if: inputs.aws_account == 'alexander-test'
+        if: inputs.aws_account == 'Test'
         uses: aws-actions/configure-aws-credentials@v4.3.1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_TEST }}
@@ -120,7 +120,7 @@ jobs:
           aws-region: ${{ inputs.region }}
 
       - name: Configure AWS Credentials for Emir Production
-        if: inputs.aws_account == 'emir-production'
+        if: inputs.aws_account == 'Production'
         uses: aws-actions/configure-aws-credentials@v4.3.1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_PRODUCTION }}

@@ -16,9 +16,9 @@ on:
         required: true
         type: choice
         options:
-          - alexander-test
-          - eliza-dev
-          - emir-production
+          - Test
+          - Development
+          - Production
 
       region:
         description: "AWS region for AMI image"
@@ -54,7 +54,7 @@ jobs:
           version: "1.10.0"
 
       - name: Configure AWS Credentials (Alexander Test)
-        if: ${{ inputs.aws_account == 'alexander-test' }}
+        if: ${{ inputs.aws_account == 'Test' }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_TEST }}
@@ -62,7 +62,7 @@ jobs:
           aws-region: ${{ inputs.region }}
 
       - name: Configure AWS Credentials (Eliza Dev)
-        if: ${{ inputs.aws_account == 'eliza-dev' }}
+        if: ${{ inputs.aws_account == 'Development' }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_DEV }}
@@ -70,7 +70,7 @@ jobs:
           aws-region: ${{ inputs.region }}
 
       - name: Configure AWS Credentials (Emir Production)
-        if: ${{ inputs.aws_account == 'emir-production' }}
+        if: ${{ inputs.aws_account == 'Production' }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_PRODUCTION }}

@@ -9,9 +9,9 @@ on:
         required: true
         type: choice
         options:
-          - alexander-test
-          - eliza-dev
-          - emir-production
+          - Test
+          - Development
+          - Production
       region:
         description: "AWS region for Nagios infrastructure"
         required: true

@@ -36,7 +36,7 @@ ProjectNagiosWorkflows/
 
 **Create_AMI_Bastion.yml**
 - Builds custom Bastion host AMI using Packer
-- Supports multiple AWS accounts (alexander-test, eliza-dev, emir-production)
+- Supports multiple AWS accounts (Test, Development, Production)
 - Configurable regions: ca-central-1, us-east-1, us-east-2, us-west-1, us-west-2
 - Uses t3.small instances for AMI building
 - Creates AMI named "Bastion-ami"
@@ -82,9 +82,9 @@ ProjectNagiosWorkflows/
 
 ### Multi-Account Support
 All workflows support three AWS account environments:
-- `alexander-test` - Testing environment
-- `eliza-dev` - Development environment  
-- `emir-production` - Production environment
+- `Test` - Testing environment
+- `Development` - Development environment  
+- `Production` - Production environment
 
 ### Multi-Region Deployment
 - **AMI Building**: ca-central-1, us-east-1, us-east-2, us-west-1, us-west-2
