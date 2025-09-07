@@ -1,5 +1,6 @@
 name: Destroy ALL Nagios infra
 
+
 on:
   workflow_dispatch:
     inputs:
