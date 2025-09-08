@@ -31,7 +31,7 @@ You need an AWS user that GitHub Actions can use to deploy infrastructure.
    - `AdministratorAccess` → full control for EC2, VPC, IAM  
      *(or create your own least-privilege policy for tighter security)*  
 
-3. After creation, download the credentials file (`.csv`).  
+3. After creation, download the credentials file (`.csv`) or just copy from AWS.  
    It contains:  
    - `AWS_ACCESS_KEY_ID`  
    - `AWS_SECRET_ACCESS_KEY`
