@@ -60,4 +60,61 @@ Name it: PRIVATE_REPO_TOKEN
 Paste the token.
 Choose "All repositories" or select the public repo where workflows live.
 
+
+
 And heres how setup your environment variables in your GitHub repository:
+Step 1. Open Environments in Repo
+Go to GitHub → Your repo → Settings → Environments
+Click New environment → name it exactly as the region (e.g., ca-central-1, us-west-2, us-west-1, us-east-1, us-east-2).
+Repeat until you have all 5 environments created.
+
+Step 2. Add Environment Secrets
+For each environment:
+Open the environment (e.g., ca-central-1)
+Click Configure environment → Environment secrets → Add secret
+Add a secret named:
+TERRAFORM_TFVARS
+Paste the content of your .tfvars file (example for us-east-1):
+```txt
+# AWS Configuration
+region = \"us-east-1\"
+
+# Network Configuration
+vpc_cidr = \"10.0.0.0/16\"
+subnet = [\"10.0.1.0/24\",  \"10.0.2.0/24\",  \"10.0.3.0/24\" ]
+
+# VPC Settings
+dns_support   = true
+dns_hostnames = true
+enable_igw    = true
+
+# EC2 Instance Configuration
+instance_type = \"t2.micro\"
+key_name      = \"generated-bastion-key\"
+
+# Security Configuration
+open_ports = [22, 80, 5666]
+
+# AMI Configuration
+custom_ami      = true
+custom_ami_name = \"Nagios-ami\"
+ami_role_admin  = true
+
+# Shared State Configuration
+shared_state_bucket = \"terraform-state-bucket-us-east-1\"
+
+# Bastion Integration Configuration
+use_bastion_key = false
+bastion_state_bucket = \"terraform-state-bucket-us-east-1\"
+bastion_state_region = \"us-east-1\"
+bastion_instance_region = \"us-east-1\"
+```
+
+Next run workflows:
+1) create AMI - run workflow Create_AMI_Nagios.yml andCreate_AMI_Bastion.yml
+2) create S3 bucket - run workflow Create_Bucket.yml
+3) create Bastion - run workflow Create_Bastion.yml
+4) create Nagios - run workflow Create_Nagios_infra.yml
+
+To destroy all create infrastrucutre run:
+run workflow Destroy_ALL.yml
