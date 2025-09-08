@@ -17,8 +17,6 @@ Orchestrates complete infrastructure lifecycle: AMI building → S3 state storag
 ```
 
 
----
-
 ## Setup Instructions
 
 ### 1. Configure AWS IAM User and Keys
