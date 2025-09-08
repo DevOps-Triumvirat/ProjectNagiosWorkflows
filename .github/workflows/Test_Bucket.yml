@@ -124,3 +124,5 @@ jobs:
           # Delete the bucket
           aws s3api delete-bucket --bucket "${{ inputs.bucket }}" --region "${{ inputs.region }}"
           echo "Bucket ${{ inputs.bucket }} deleted successfully"
+
+          
