@@ -50,9 +50,6 @@ jobs:
         with:
           terraform_version: "1.12.2"
 
-      # -----------------------------
-      # Configure AWS credentials per account
-      # -----------------------------
       - name: Configure AWS Credentials for Test
         if: ${{ inputs.aws_account == 'Test' }}
         uses: aws-actions/configure-aws-credentials@v4
@@ -100,7 +97,7 @@ jobs:
 
           resource "aws_s3_bucket" "tf_state" {
             bucket              = "${{ inputs.bucket }}"
-            # object_lock_enabled = true
+            object_lock_enabled = true
           }
 
           resource "aws_s3_bucket_versioning" "tf_state" {
@@ -130,6 +127,51 @@ jobs:
         if: ${{ inputs.action == 'create' }}
         run: terraform apply -auto-approve
 
+      - name: Empty S3 bucket before destruction
+        if: ${{ inputs.action == 'destroy' }}
+        run: |
+          echo "Emptying bucket ${{ inputs.bucket }} before destruction..."
+          
+          # Remove all objects and versions from the bucket
+          aws s3 rm s3://${{ inputs.bucket }} --recursive || echo "Bucket already empty or doesn't exist"
+          
+          # Delete all object versions (for versioned buckets)
+          aws s3api list-object-versions --bucket "${{ inputs.bucket }}" --query 'Versions[].{Key:Key,VersionId:VersionId}' --output text | while read key version; do
+            if [ ! -z "$key" ] && [ ! -z "$version" ]; then
+              echo "Deleting version $version of $key"
+              aws s3api delete-object --bucket "${{ inputs.bucket }}" --key "$key" --version-id "$version"
+            fi
+          done
+          
+          # Remove all delete markers
+          aws s3api list-object-versions --bucket "${{ inputs.bucket }}" --query 'DeleteMarkers[].{Key:Key,VersionId:VersionId}' --output text | while read key version; do
+            if [ ! -z "$key" ] && [ ! -z "$version" ]; then
+              echo "Deleting delete marker $version of $key"
+              aws s3api delete-object --bucket "${{ inputs.bucket }}" --key "$key" --version-id "$version"
+            fi
+          done
+          
+          echo "Bucket ${{ inputs.bucket }} has been emptied"
+
+      - name: Import existing resources for destruction
+        if: ${{ inputs.action == 'destroy' }}
+        run: |
+          echo "Importing existing S3 bucket resources into Terraform state..."
+          
+          # Import the bucket itself
+          terraform import aws_s3_bucket.tf_state "${{ inputs.bucket }}" || echo "Bucket import failed or already imported"
+          
+          # Import bucket versioning configuration
+          terraform import aws_s3_bucket_versioning.tf_state "${{ inputs.bucket }}" || echo "Versioning import failed or already imported"
+          
+          # Import server-side encryption configuration
+          terraform import aws_s3_bucket_server_side_encryption_configuration.tf_state "${{ inputs.bucket }}" || echo "Encryption import failed or already imported"
+          
+          echo "Resource import completed"
+
       - name: Terraform Destroy (Destroy Bucket)
         if: ${{ inputs.action == 'destroy' }}
-        run: terraform destroy -auto-approve
+        run: |
+          echo "Destroying S3 bucket ${{ inputs.bucket }} with Terraform..."
+          terraform destroy -auto-approve
+          echo "Bucket ${{ inputs.bucket }} destroyed successfully"
