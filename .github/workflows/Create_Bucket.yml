@@ -143,8 +143,18 @@ jobs:
         run: terraform plan
 
       - name: Terraform Apply (Create Bucket)
-        if: ${{ inputs.action == 'create' }}
+        if: ${{ inputs.action == 'Create_s3_Bucket' }}
         run: terraform apply -auto-approve
+
+      - name: Create empty nagios/terraform.tfstate file
+        if: ${{ inputs.action == 'Create_s3_Bucket' }}
+        run: |
+          # Create an empty terraform state file for nagios (not the bucket creation state)
+          echo '{}' > empty_nagios_state.json
+          
+          # Upload the empty state file to the nagios folder
+          aws s3 cp empty_nagios_state.json s3://${{ inputs.bucket }}/nagios/${{ inputs.region }}/terraform.tfstate
+          echo "Created empty nagios/terraform.tfstate file in bucket ${{ inputs.bucket }}"
 
       - name: Empty S3 bucket before destruction
         if: ${{ inputs.action == 'Destroy_s3_Bucket' }}
