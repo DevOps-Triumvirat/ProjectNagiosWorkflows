@@ -174,6 +174,26 @@ jobs:
           export AWS_REGION="${{ inputs.region }}"
           terraform init
 
+      - name: Terraform Plan
+        env:
+          AWS_DEFAULT_REGION: ${{ inputs.region }}
+          AWS_REGION: ${{ inputs.region }}
+        run: |
+          export AWS_DEFAULT_REGION="${{ inputs.region }}"
+          export AWS_REGION="${{ inputs.region }}"
+          echo "=== Terraform Plan Output ==="
+          terraform plan -detailed-exitcode
+          PLAN_EXIT_CODE=$?
+          echo "Plan exit code: $PLAN_EXIT_CODE"
+          if [ $PLAN_EXIT_CODE -eq 1 ]; then
+            echo "❌ Terraform plan failed"
+            exit 1
+          elif [ $PLAN_EXIT_CODE -eq 2 ]; then
+            echo "✅ Terraform plan completed - changes detected"
+          else
+            echo "✅ Terraform plan completed - no changes needed"
+          fi
+
       - name: Empty S3 bucket before destruction
         if: inputs.action == 'Destroy_s3_Bucket'
         run: |
@@ -200,6 +220,27 @@ jobs:
           terraform import aws_s3_bucket.tf_state "${{ inputs.bucket }}" 
           terraform import aws_s3_bucket_versioning.tf_state "${{ inputs.bucket }}" 
           terraform import aws_s3_bucket_server_side_encryption_configuration.tf_state "${{ inputs.bucket }}" 
+
+      - name: Terraform Plan for Destroy
+        if: inputs.action == 'Destroy_s3_Bucket'
+        env:
+          AWS_DEFAULT_REGION: ${{ inputs.region }}
+          AWS_REGION: ${{ inputs.region }}
+        run: |
+          export AWS_DEFAULT_REGION="${{ inputs.region }}"
+          export AWS_REGION="${{ inputs.region }}"
+          echo "=== Terraform Destroy Plan Output ==="
+          terraform plan -destroy -detailed-exitcode
+          PLAN_EXIT_CODE=$?
+          echo "Destroy plan exit code: $PLAN_EXIT_CODE"
+          if [ $PLAN_EXIT_CODE -eq 1 ]; then
+            echo "❌ Terraform destroy plan failed"
+            exit 1
+          elif [ $PLAN_EXIT_CODE -eq 2 ]; then
+            echo "✅ Terraform destroy plan completed - resources will be destroyed"
+          else
+            echo "✅ Terraform destroy plan completed - no resources to destroy"
+          fi
 
       - name: Terraform Apply
         if: inputs.action == 'Create_s3_Bucket'
