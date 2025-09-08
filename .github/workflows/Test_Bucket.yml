@@ -1,4 +1,4 @@
-name: Manage S3 Bucket
+name: Test Bucket
 
 on:
   workflow_dispatch:
@@ -125,4 +125,3 @@ jobs:
           aws s3api delete-bucket --bucket "${{ inputs.bucket }}" --region "${{ inputs.region }}"
           echo "Bucket ${{ inputs.bucket }} deleted successfully"
 
-          
