@@ -104,9 +104,9 @@ jobs:
     needs: create-bastion-infrastructure
     runs-on: ubuntu-latest
     steps:
-      - name: Wait 40 seconds after bastion creation(to generate ssh key)
+      - name: Wait 50 seconds after bastion creation(to generate ssh key)
         run: |
-          sleep 40
+          sleep 50
 
 
   create-nagios-infrastructure:
