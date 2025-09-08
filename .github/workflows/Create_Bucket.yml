@@ -1,4 +1,4 @@
-name: Manage Terraform S3 Bucket
+name: Manage S3 Bucket
 
 on:
   workflow_dispatch:
@@ -35,101 +35,85 @@ on:
           - ca-central-1
 
 jobs:
-  manage-bucket:
+  create-bucket:
     runs-on: ubuntu-latest
-    env:
-      AWS_DEFAULT_REGION: ${{ inputs.region }}
-      AWS_REGION: ${{ inputs.region }}
-
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+      # Create bucket steps for each account
+      - name: Create bucket in S3 (Test Account)
+        if: ${{ inputs.action == 'create' && inputs.aws_account == 'Test' }}
+        uses: aitorres/aws-s3-create-bucket@v1.2.0
         with:
-          terraform_version: "1.12.2"
+          bucket-name: ${{ inputs.bucket }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_Test }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_Test }}
+          aws-region: ${{ inputs.region }}
+          acl: 'private'
 
-      # -----------------------------
-      # Configure AWS credentials per account
-      # -----------------------------
-      - name: Configure AWS Credentials for Test
-        if: ${{ inputs.aws_account == 'Test' }}
+      - name: Create bucket in S3 (Development Account)
+        if: ${{ inputs.action == 'create' && inputs.aws_account == 'Development' }}
+        uses: aitorres/aws-s3-create-bucket@v1.2.0
+        with:
+          bucket-name: ${{ inputs.bucket }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_Development }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_Development }}
+          aws-region: ${{ inputs.region }}
+          acl: 'private'
+
+      - name: Create bucket in S3 (Production Account)
+        if: ${{ inputs.action == 'create' && inputs.aws_account == 'Production' }}
+        uses: aitorres/aws-s3-create-bucket@v1.2.0
+        with:
+          bucket-name: ${{ inputs.bucket }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_Production }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_Production }}
+          aws-region: ${{ inputs.region }}
+          acl: 'private'
+
+      # Configure AWS credentials for destroy operations
+      - name: Configure AWS Credentials for Test Account
+        if: ${{ inputs.action == 'destroy' && inputs.aws_account == 'Test' }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_Test }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_Test }}
           aws-region: ${{ inputs.region }}
 
-      - name: Configure AWS Credentials for Development
-        if: ${{ inputs.aws_account == 'Development' }}
+      - name: Configure AWS Credentials for Development Account
+        if: ${{ inputs.action == 'destroy' && inputs.aws_account == 'Development' }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_Development }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_Development }}
           aws-region: ${{ inputs.region }}
 
-      - name: Configure AWS Credentials for Production
-        if: ${{ inputs.aws_account == 'Production' }}
+      - name: Configure AWS Credentials for Production Account
+        if: ${{ inputs.action == 'destroy' && inputs.aws_account == 'Production' }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_Production }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_Production }}
           aws-region: ${{ inputs.region }}
 
-      - name: Verify AWS Setup
-        run: |
-          echo "Region: $AWS_REGION"
-          aws sts get-caller-identity
-
-      - name: Generate Terraform Config for Bucket
-        run: |
-          cat > bucket.tf <<EOF
-          terraform {
-            required_providers {
-              aws = {
-                source  = "hashicorp/aws"
-                version = "~> 5.0"
-              }
-            }
-          }
-
-          provider "aws" {
-            region = "${{ inputs.region }}"
-          }
-
-          resource "aws_s3_bucket" "tf_state" {
-            bucket              = "${{ inputs.bucket }}"
-            # object_lock_enabled = true
-          }
-
-          resource "aws_s3_bucket_versioning" "tf_state" {
-            bucket = aws_s3_bucket.tf_state.id
-            versioning_configuration {
-              status = "Enabled"
-            }
-          }
-
-          resource "aws_s3_bucket_server_side_encryption_configuration" "tf_state" {
-            bucket = aws_s3_bucket.tf_state.id
-            rule {
-              apply_server_side_encryption_by_default {
-                sse_algorithm = "AES256"
-              }
-            }
-          }
-          EOF
-
-      - name: Terraform Init
-        run: terraform init
-
-      - name: Terraform Plan
-        run: terraform plan
-
-      - name: Terraform Apply (Create Bucket)
-        if: ${{ inputs.action == 'create' }}
-        run: terraform apply -auto-approve
-
-      - name: Terraform Destroy (Destroy Bucket)
+      - name: Destroy bucket in S3
         if: ${{ inputs.action == 'destroy' }}
-        run: terraform destroy -auto-approve
+        run: |
+          # Empty the bucket first
+          aws s3 rm s3://${{ inputs.bucket }} --recursive || echo "Bucket already empty or doesn't exist"
+          
+          # Delete all object versions (for versioned buckets)
+          aws s3api list-object-versions --bucket "${{ inputs.bucket }}" --query 'Versions[].{Key:Key,VersionId:VersionId}' --output text | while read key version; do
+            if [ ! -z "$key" ] && [ ! -z "$version" ]; then
+              aws s3api delete-object --bucket "${{ inputs.bucket }}" --key "$key" --version-id "$version"
+            fi
+          done
+          
+          # Remove all delete markers
+          aws s3api list-object-versions --bucket "${{ inputs.bucket }}" --query 'DeleteMarkers[].{Key:Key,VersionId:VersionId}' --output text | while read key version; do
+            if [ ! -z "$key" ] && [ ! -z "$version" ]; then
+              aws s3api delete-object --bucket "${{ inputs.bucket }}" --key "$key" --version-id "$version"
+            fi
+          done
+          
+          # Delete the bucket
+          aws s3api delete-bucket --bucket "${{ inputs.bucket }}" --region "${{ inputs.region }}"
+          echo "Bucket ${{ inputs.bucket }} deleted successfully"
