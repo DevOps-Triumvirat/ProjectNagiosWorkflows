@@ -82,9 +82,9 @@ jobs:
     needs: create-s3-bucket
     runs-on: ubuntu-latest
     steps:
-      - name: Wait 30 seconds after bucket creation
+      - name: Wait 20 seconds after bucket creation
         run: |
-          sleep 30
+          sleep 20
         
   create-bastion-infrastructure:
     if: inputs.action == 'create'
