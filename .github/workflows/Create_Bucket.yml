@@ -8,9 +8,9 @@ on:
         required: true
         type: choice
         options:
-          - create
-          - destroy
-        default: create
+          - Create_s3_Bucket
+          - Destroy_s3_Bucket
+        default: Create_s3_Bucket
       bucket:
         description: "Unique S3 bucket name"
         required: true
@@ -128,7 +128,7 @@ jobs:
         run: terraform apply -auto-approve
 
       - name: Empty S3 bucket before destruction
-        if: ${{ inputs.action == 'destroy' }}
+        if: ${{ inputs.action == 'Destroy_s3_Bucket' }}
         run: |
           echo "Emptying bucket ${{ inputs.bucket }} before destruction..."
           
@@ -154,7 +154,7 @@ jobs:
           echo "Bucket ${{ inputs.bucket }} has been emptied"
 
       - name: Import existing resources for destruction
-        if: ${{ inputs.action == 'destroy' }}
+        if: ${{ inputs.action == 'Destroy_s3_Bucket' }}
         run: |
           echo "Importing existing S3 bucket resources into Terraform state..."
           
@@ -170,10 +170,9 @@ jobs:
           echo "Resource import completed"
 
       - name: Terraform Destroy (Destroy Bucket)
-        if: ${{ inputs.action == 'destroy' }}
+        if: ${{ inputs.action == 'Destroy_s3_Bucket' }}
         run: |
           echo "Destroying S3 bucket ${{ inputs.bucket }} with Terraform..."
           terraform destroy -auto-approve
           echo "Bucket ${{ inputs.bucket }} destroyed successfully"
 
-          
