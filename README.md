@@ -79,7 +79,7 @@ Each AWS region requires its own environment configuration in GitHub.
    - Name: `TERRAFORM_TFVARS`  
    - Value: paste the content of your `.tfvars` file  
 
-**Example `.tfvars` for `us-east-1`:**
+**Example `TERRAFORM_TFVARS` for `us-east-1`:**
 ```hcl
 # AWS Configuration
 region = "us-east-1"
