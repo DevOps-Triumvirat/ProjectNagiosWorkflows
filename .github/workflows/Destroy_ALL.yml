@@ -85,7 +85,7 @@ jobs:
       - name: Wait 30 seconds after bucket creation
         run: |
           sleep 30
-
+        
   create-bastion-infrastructure:
     if: inputs.action == 'create'
     needs: wait-after-bucket
