@@ -175,3 +175,5 @@ jobs:
           echo "Destroying S3 bucket ${{ inputs.bucket }} with Terraform..."
           terraform destroy -auto-approve
           echo "Bucket ${{ inputs.bucket }} destroyed successfully"
+
+          
