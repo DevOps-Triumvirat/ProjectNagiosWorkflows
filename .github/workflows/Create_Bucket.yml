@@ -134,7 +134,7 @@ jobs:
           # Create S3 bucket for tfstate with object lock enabled
           resource "aws_s3_bucket" "tf_state" {
             bucket        = "${{ inputs.bucket }}"
-            object_lock_enabled = true           
+            # object_lock_enabled = true           
           }
 
           # Enable versioning
