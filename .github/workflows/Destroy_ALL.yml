@@ -77,9 +77,18 @@ jobs:
       region: ${{ inputs.bucket_region }}
     secrets: inherit
 
-  create-bastion-infrastructure:
+  wait-after-bucket:
     if: inputs.action == 'create'
     needs: create-s3-bucket
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait 30 seconds after bucket creation
+        run: |
+          sleep 30
+
+  create-bastion-infrastructure:
+    if: inputs.action == 'create'
+    needs: wait-after-bucket
     uses: ./.github/workflows/Create_Bastion.yml
     with:
       action: "apply"
