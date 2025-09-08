@@ -1,0 +1,126 @@
+name: Manage S3 Bucket
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "Action to perform on S3 bucket"
+        required: true
+        type: choice
+        options:
+          - create
+          - destroy
+        default: create
+      bucket:
+        description: "Unique S3 bucket name"
+        required: true
+        type: string
+      aws_account:
+        description: "AWS account to use"
+        required: true
+        type: choice
+        options:
+          - Test
+          - Development
+          - Production
+      region:
+        description: "AWS region"
+        required: true
+        type: choice
+        options:
+          - us-east-1
+          - us-east-2
+          - us-west-1
+          - us-west-2
+          - ca-central-1
+
+jobs:
+  create-bucket:
+    runs-on: ubuntu-latest
+    steps:
+      # Configure AWS credentials for create operations
+      - name: Configure AWS Credentials for Test Account
+        if: ${{ inputs.action == 'create' && inputs.aws_account == 'Test' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_Test }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_Test }}
+          aws-region: ${{ inputs.region }}
+
+      - name: Configure AWS Credentials for Development Account
+        if: ${{ inputs.action == 'create' && inputs.aws_account == 'Development' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_Development }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_Development }}
+          aws-region: ${{ inputs.region }}
+
+      - name: Configure AWS Credentials for Production Account
+        if: ${{ inputs.action == 'create' && inputs.aws_account == 'Production' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_Production }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_Production }}
+          aws-region: ${{ inputs.region }}
+
+      # Create bucket using AWS CLI (handles us-east-1 properly)
+      - name: Create S3 bucket
+        if: ${{ inputs.action == 'create' }}
+        run: |
+          if [ "${{ inputs.region }}" = "us-east-1" ]; then
+            # For us-east-1, don't specify location constraint
+            aws s3api create-bucket --bucket "${{ inputs.bucket }}" --acl private
+          else
+            # For other regions, specify location constraint
+            aws s3api create-bucket --bucket "${{ inputs.bucket }}" --region "${{ inputs.region }}" --create-bucket-configuration LocationConstraint=${{ inputs.region }} --acl private
+          fi
+          echo "Bucket ${{ inputs.bucket }} created successfully in ${{ inputs.region }}"
+
+      # Configure AWS credentials for destroy operations
+      - name: Configure AWS Credentials for Test Account
+        if: ${{ inputs.action == 'destroy' && inputs.aws_account == 'Test' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_Test }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_Test }}
+          aws-region: ${{ inputs.region }}
+
+      - name: Configure AWS Credentials for Development Account
+        if: ${{ inputs.action == 'destroy' && inputs.aws_account == 'Development' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_Development }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_Development }}
+          aws-region: ${{ inputs.region }}
+
+      - name: Configure AWS Credentials for Production Account
+        if: ${{ inputs.action == 'destroy' && inputs.aws_account == 'Production' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_Production }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_Production }}
+          aws-region: ${{ inputs.region }}
+
+      - name: Destroy bucket in S3
+        if: ${{ inputs.action == 'destroy' }}
+        run: |
+          # Empty the bucket first
+          aws s3 rm s3://${{ inputs.bucket }} --recursive || echo "Bucket already empty or doesn't exist"
+          
+          # Delete all object versions (for versioned buckets)
+          aws s3api list-object-versions --bucket "${{ inputs.bucket }}" --query 'Versions[].{Key:Key,VersionId:VersionId}' --output text | while read key version; do
+            if [ ! -z "$key" ] && [ ! -z "$version" ]; then
+              aws s3api delete-object --bucket "${{ inputs.bucket }}" --key "$key" --version-id "$version"
+            fi
+          done
+          
+          # Remove all delete markers
+          aws s3api list-object-versions --bucket "${{ inputs.bucket }}" --query 'DeleteMarkers[].{Key:Key,VersionId:VersionId}' --output text | while read key version; do
+            if [ ! -z "$key" ] && [ ! -z "$version" ]; then
+              aws s3api delete-object --bucket "${{ inputs.bucket }}" --key "$key" --version-id "$version"
+            fi
+          done
+          
+          # Delete the bucket
+          aws s3api delete-bucket --bucket "${{ inputs.bucket }}" --region "${{ inputs.region }}"
+          echo "Bucket ${{ inputs.bucket }} deleted successfully"
