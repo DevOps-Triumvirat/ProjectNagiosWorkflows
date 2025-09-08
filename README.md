@@ -23,7 +23,7 @@ Orchestrates complete infrastructure lifecycle: AMI building → S3 state storag
 You need an AWS user that GitHub Actions can use to deploy infrastructure.
 
 1. Go to **AWS Console → IAM → Users → Add user**  
-   - User name: `github-dev`  
+   - User name: `nagios-dev`  or any you like
    - Enable: **Programmatic access**  
 
 2. Attach permissions (choose either full access or least privilege):  
